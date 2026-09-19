@@ -30,6 +30,16 @@ FIELDS = (
     "port_of_discharge", "container_count", "gross_weight_kg",
 )
 
+FIELD_LABELS = {
+    "shipper": "Shipper",
+    "consignee": "Consignee",
+    "notify_party": "Notify Party",
+    "port_of_loading": "Port of Loading",
+    "port_of_discharge": "Port of Discharge",
+    "container_count": "Container Count",
+    "gross_weight_kg": "Gross Weight",
+}
+
 # The values are deliberately broad: the inbox includes forwarded messages,
 # so classification is made from the subject and current-message text together.
 SPAM_WORDS = ("winner", "prize", "lottery", "urgent payment", "mailbox full",
@@ -57,6 +67,16 @@ LLM_LABELS = {
 }
 CACHE_PATH = Path("llm_cache.json")
 FALLBACK_LOG_PATH = Path("llm_fallbacks.log")
+
+# Second-opinion provider, tried only when NVIDIA hard-fails. Free-tier
+# OpenRouter is rate-limited (20 req/min, 50/day) - a prior run that called it
+# unconditionally for every email in this ~520-email dataset exhausted the
+# quota almost immediately (near-total http_429). The cap and the
+# exhausted-flag short-circuit below exist specifically to prevent repeating
+# that failure mode.
+OPENROUTER_MODEL = "google/gemini-2.0-flash-001"
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MAX_CALLS_PER_RUN = int(os.environ.get("OPENROUTER_MAX_CALLS_PER_RUN", "40"))
 
 LABELS = {
     "shipper": (r"shipper(?:\s*/\s*exporter)?", r"exporter", r"seller"),
@@ -94,19 +114,38 @@ def classify_keywords(email: dict) -> str:
 
 
 class LLMClassifier:
-    """OpenRouter classifier with an on-disk result cache and safe fallback."""
+    """Two-LLM-opinion classifier (NVIDIA, then OpenRouter) with an on-disk
+    result cache and a deterministic keyword fallback if both are down."""
 
     def __init__(self, cache_path: Path = CACHE_PATH, fallback_log_path: Path = FALLBACK_LOG_PATH):
         self.cache_path = cache_path
         self.fallback_log_path = fallback_log_path
         self.api_key = os.environ.get("NVIDIA_API_KEY", "")
+        self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY", "")
         self.lock = threading.Lock()
         self.fallbacks: list[tuple[str, str]] = []
+        self._openrouter_calls = 0
+        self._openrouter_exhausted = threading.Event()
+        self._openrouter_last_call = 0.0
+        self.cache = self._load_cache(cache_path)
+
+    @staticmethod
+    def _load_cache(cache_path: Path) -> dict[str, dict[str, str]]:
         try:
-            cached = json.loads(cache_path.read_text(encoding="utf-8"))
-            self.cache = {eid: label for eid, label in cached.items() if label in LLM_LABELS}
+            raw = json.loads(cache_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError, AttributeError):
-            self.cache = {}
+            return {}
+        cache: dict[str, dict[str, str]] = {}
+        for email_id, value in raw.items():
+            if isinstance(value, str) and value in LLM_LABELS:
+                # Legacy cache format (label only, written before the
+                # OpenRouter second opinion existed): those entries were all
+                # produced by NVIDIA.
+                cache[email_id] = {"label": value, "provider": "nvidia"}
+            elif (isinstance(value, dict) and value.get("label") in LLM_LABELS
+                    and value.get("provider") in ("nvidia", "openrouter")):
+                cache[email_id] = value
+        return cache
 
     def _log_fallback(self, email_id: str, reason: str) -> None:
         with self.lock:
@@ -114,7 +153,7 @@ class LLMClassifier:
             with self.fallback_log_path.open("a", encoding="utf-8") as log:
                 log.write(f"{email_id}\t{reason}\n")
 
-    def _request_label(self, email: dict) -> tuple[str | None, str | None]:
+    def _request_label_nvidia(self, email: dict) -> tuple[str | None, str | None]:
         if not self.api_key:
             return None, "missing_api_key"
         prompt = (
@@ -162,19 +201,96 @@ class LLMClassifier:
                 time.sleep(2 ** (attempt + 1))
         return None, reason
 
+    def _request_label_openrouter(self, email: dict) -> tuple[str | None, str | None]:
+        """Second LLM opinion, tried only after NVIDIA has failed. Capped and
+        throttled - see the module-level comment on OPENROUTER_MAX_CALLS_PER_RUN."""
+        if not self.openrouter_api_key:
+            return None, "missing_api_key"
+        if self._openrouter_exhausted.is_set():
+            return None, "budget_exhausted"
+        with self.lock:
+            if self._openrouter_calls >= OPENROUTER_MAX_CALLS_PER_RUN:
+                self._openrouter_exhausted.set()
+                return None, "budget_exhausted"
+            self._openrouter_calls += 1
+            wait = 3.5 - (time.monotonic() - self._openrouter_last_call)
+            self._openrouter_last_call = time.monotonic() + max(wait, 0)
+        if wait > 0:
+            time.sleep(wait)
+
+        labels = ", ".join(f'"{label}"' for label in LLM_LABELS)
+        prompt = (
+            f"Classify this shipping email into exactly one label: {labels}.\n"
+            "Return only a JSON string value containing the label, with no other text.\n\n"
+            f"Subject: {email.get('subject', '')}\n\nBody:\n{email.get('body', '')}"
+        )
+        payload = {
+            "model": OPENROUTER_MODEL,
+            "temperature": 0,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        body = json.dumps(payload).encode("utf-8")
+        reason = "unknown_error"
+        for attempt in range(2):
+            try:
+                request = Request(
+                    OPENROUTER_URL,
+                    data=body,
+                    headers={
+                        "Authorization": f"Bearer {self.openrouter_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    method="POST",
+                )
+                with urlopen(request, timeout=30) as response:
+                    result = json.loads(response.read().decode("utf-8"))
+                content = result["choices"][0]["message"]["content"]
+                label = json.loads(content.strip())
+                if isinstance(label, str) and label in LLM_LABELS:
+                    return label, None
+                reason = "bad_label"
+            except HTTPError as error:
+                reason = f"http_{error.code}"
+                if error.code == 429:
+                    # A real rate-limit hit - stop sending any further
+                    # OpenRouter requests for the rest of this run.
+                    self._openrouter_exhausted.set()
+                    return None, reason
+            except TimeoutError:
+                reason = "timeout"
+            except URLError as error:
+                reason = "timeout" if "timed out" in str(error.reason).lower() else "network_error"
+            except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
+                reason = "bad_response"
+            except Exception as error:
+                reason = f"api_error_{type(error).__name__.lower()}"
+            if attempt < 1:
+                time.sleep(3 * (attempt + 1))
+        return None, reason
+
     def classify(self, email: dict) -> str:
         email_id = email["email_id"]
         with self.lock:
-            label = self.cache.get(email_id)
+            cached = self.cache.get(email_id)
+        if cached:
+            return LLM_LABELS[cached["label"]]
+
+        label, nvidia_reason = self._request_label_nvidia(email)
         if label:
+            self._store_cache(email_id, label, "nvidia")
             return LLM_LABELS[label]
-        label, reason = self._request_label(email)
+
+        label, openrouter_reason = self._request_label_openrouter(email)
         if label:
-            with self.lock:
-                self.cache[email_id] = label
+            self._store_cache(email_id, label, "openrouter")
             return LLM_LABELS[label]
-        self._log_fallback(email_id, reason or "unknown_error")
+
+        self._log_fallback(email_id, f"nvidia:{nvidia_reason};openrouter:{openrouter_reason}")
         return classify_keywords(email)
+
+    def _store_cache(self, email_id: str, label: str, provider: str) -> None:
+        with self.lock:
+            self.cache[email_id] = {"label": label, "provider": provider}
 
     def save_cache(self) -> None:
         with self.lock:
@@ -357,6 +473,51 @@ def compare(email: dict, inbox: Inbox) -> dict:
     return ok()
 
 
+def field_comparison_rows(email: dict, inbox: Inbox, result: dict) -> list[dict]:
+    """Per-field SI/BL values + match/mismatch status for the review UI's case
+    detail view. Ported from backend.py's former on-demand /emails/{id} logic
+    (same _si/_bl substring matching, same placeholder-row fallback) so it can
+    instead be precomputed once here and stored alongside the classification,
+    rather than recomputed from attachment files on every UI request."""
+    fields: list[dict] = []
+    defect_fields = set(result.get("defect_fields", []))
+
+    if result.get("category") == "BL_COMPARISON":
+        attachments = email.get("attachments", [])
+        si_paths = [p for p in attachments if "_si" in Path(p).stem.casefold()]
+        bl_paths = [p for p in attachments if "_bl" in Path(p).stem.casefold()]
+        si_text = attachment_text(inbox, si_paths[0]) if si_paths else None
+        bl_text = attachment_text(inbox, bl_paths[0]) if bl_paths else None
+
+        if si_text is not None and bl_text is not None:
+            si_values, bl_values = extract_fields(si_text), extract_fields(bl_text)
+            for field in FIELDS:
+                si_value, bl_value = si_values.get(field), bl_values.get(field)
+                if si_value and bl_value:
+                    status = "match" if same_value(field, si_value, bl_value) else "mismatch"
+                else:
+                    status = "mismatch"
+                fields.append({
+                    "field": field,
+                    "label": FIELD_LABELS[field],
+                    "si_value": si_value,
+                    "bl_value": bl_value,
+                    "status": status,
+                })
+
+    if not fields:
+        for field in FIELDS:
+            fields.append({
+                "field": field,
+                "label": FIELD_LABELS[field],
+                "si_value": None,
+                "bl_value": None,
+                "status": "mismatch" if field in defect_fields else "match",
+            })
+
+    return fields
+
+
 def ok() -> dict:
     return {"status": "OK", "review_reason": None, "defect_fields": [], "has_defect": False}
 
@@ -366,12 +527,16 @@ def review(reason: str) -> dict:
             "defect_fields": [], "has_defect": False}
 
 
-def run(source: str = "data") -> dict:
+def _resolve_source(source: str) -> str:
     # The challenge bundle itself is a valid Inbox root.  Prefer the requested
     # data/ convention when present, while keeping the script directly runnable.
     if source == "data" and not Path(source).exists():
-        source = str(Path(__file__).resolve().parent)
-    inbox = Inbox(source)
+        return str(Path(__file__).resolve().parent)
+    return source
+
+
+def run(source: str = "data") -> dict:
+    inbox = Inbox(_resolve_source(source))
     emails = list(inbox)
     classifier = LLMClassifier()
     # The executor enforces the free-tier request limit while cache hits return
@@ -386,11 +551,83 @@ def run(source: str = "data") -> dict:
     return submission
 
 
+def _build_case_rows(emails: list[dict], inbox: Inbox, submission: dict) -> dict[str, dict]:
+    """One row per email_id: the submission.json result plus its precomputed
+    field_comparison, the shape both supabase_sync.sync_submission() and the
+    local case-data.json fallback snapshot need."""
+    rows = {}
+    for email in emails:
+        result = submission.get(email["email_id"])
+        if result is None:
+            continue
+        rows[email["email_id"]] = {
+            **result,
+            "field_comparison": field_comparison_rows(email, inbox, result),
+        }
+    return rows
+
+
+def _write_case_data_snapshot(emails: list[dict], rows: dict[str, dict]) -> None:
+    """Write frontend/public/case-data.json: a static snapshot the review UI
+    reads when no Supabase project is configured, so the dashboard still
+    works with zero external services (mirrors what backend.py used to serve
+    before the UI became Supabase-native)."""
+    case_emails = []
+    review_queue = []
+    for email in emails:
+        result = rows.get(email["email_id"])
+        if result is None:
+            continue
+        case_emails.append({
+            "id": email["email_id"],
+            "subject": email.get("subject", ""),
+            "from": email.get("from", ""),
+            "category": result.get("category"),
+            "status": result.get("status"),
+            "review_reason": result.get("review_reason"),
+            "mismatches": sorted(result.get("defect_fields", [])),
+            "field_comparison": result.get("field_comparison", []),
+        })
+        if result.get("status") == "NEEDS_REVIEW":
+            review_queue.append({
+                "email_id": email["email_id"],
+                "subject": email.get("subject", ""),
+                "reason": result.get("review_reason"),
+                "resolved": False,
+                "resolution": None,
+            })
+
+    snapshot_path = Path(__file__).resolve().parent.parent / "frontend" / "public" / "case-data.json"
+    snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+    snapshot_path.write_text(
+        json.dumps({"emails": case_emails, "review_queue": review_queue}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> None:
     source = sys.argv[1] if len(sys.argv) > 1 else "data"
     output = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("submission.json")
-    output.write_text(json.dumps(run(source), indent=2) + "\n", encoding="utf-8")
+    submission = run(source)
+    output.write_text(json.dumps(submission, indent=2) + "\n", encoding="utf-8")
     print(output)
+
+    # Everything below is best-effort additional persistence. submission.json
+    # above is the scored contract and must never depend on any of it.
+    inbox = Inbox(_resolve_source(source))
+    emails = list(inbox)
+    rows = _build_case_rows(emails, inbox, submission)
+
+    try:
+        _write_case_data_snapshot(emails, rows)
+    except Exception as error:
+        print(f"[case-data] skipped: {error}", file=sys.stderr)
+
+    try:
+        from supabase_sync import sync_submission
+        sync_submission(emails, rows)
+    except Exception as error:
+        print(f"[supabase_sync] skipped: {error}", file=sys.stderr)
 
 
 if __name__ == "__main__":

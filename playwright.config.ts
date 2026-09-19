@@ -10,7 +10,9 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm.cmd run dev -- --host 127.0.0.1",
+    // The classifier lab now lives inside frontend/ as a tab, not a
+    // standalone app - only one dev server exists to start.
+    command: "npm.cmd --prefix frontend run dev -- --host 127.0.0.1",
     url: "http://127.0.0.1:5173",
     reuseExistingServer: true,
   },

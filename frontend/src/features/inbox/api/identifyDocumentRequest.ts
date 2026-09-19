@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 export type DocumentCategory =
   | "comparison_request"
   | "new_si_request"
@@ -42,4 +44,3 @@ export async function identifyDocumentRequest(
   if (!data) throw new Error("The classification function returned no decision");
   return data;
 }
-import type { SupabaseClient } from "@supabase/supabase-js";

@@ -1,5 +1,6 @@
 import { Icon } from "./IconSprite";
 import type { View } from "../App";
+import { supabase } from "../lib/supabase";
 
 interface SidebarProps {
   view: View;
@@ -15,6 +16,10 @@ const NAV_ITEMS: { view: View; icon: string; label: string; count?: "inbox" | "r
   { view: "review", icon: "i-review", label: "Review queue", count: "review" },
   { view: "reports", icon: "i-file", label: "Reports" },
   { view: "analytics", icon: "i-chart", label: "Analytics" },
+];
+
+const TOOLS_NAV_ITEMS: { view: View; icon: string; label: string }[] = [
+  { view: "classifier-lab", icon: "i-search", label: "Classifier lab" },
 ];
 
 export function Sidebar({ view, onNavigate, open, inboxCount, reviewCount }: SidebarProps) {
@@ -47,6 +52,20 @@ export function Sidebar({ view, onNavigate, open, inboxCount, reviewCount }: Sid
         ))}
       </nav>
 
+      <div className="nav-label">Tools</div>
+      <nav className="nav-list" aria-label="Tools navigation">
+        {TOOLS_NAV_ITEMS.map((item) => (
+          <button
+            key={item.view}
+            className={`nav-item${view === item.view ? " active" : ""}`}
+            onClick={() => onNavigate(item.view)}
+          >
+            <Icon id={item.icon} />
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
+
       <div className="nav-label">Manage</div>
       <nav className="nav-list" aria-label="Settings navigation">
         <button
@@ -61,11 +80,11 @@ export function Sidebar({ view, onNavigate, open, inboxCount, reviewCount }: Sid
       <div className="sidebar-spacer" />
       <div className="system-card">
         <div className="system-head">
-          <strong>Backend connected</strong>
+          <strong>{supabase ? "Supabase connected" : "Local mode"}</strong>
           <span className="live-dot" />
         </div>
         <div className="system-copy">
-          FastAPI serving submission.json
+          {supabase ? "Live Postgres data" : "case-data.json snapshot"}
           <br />
           Pipeline results, no live re-run
         </div>

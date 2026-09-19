@@ -16,5 +16,5 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src", "vite.config.ts", "supabase/functions/_shared/document-classifier.ts"]
+  "include": ["supabase/functions/_shared/document-classifier.ts"]
 }

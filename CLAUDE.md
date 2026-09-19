@@ -7,21 +7,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 An entry for the **SDOC hackathon** ("Shipping document verification"): given an inbox of
 shipping-related emails, classify each one and, for comparison emails, check the attached
 Shipping Instruction (SI) against the draft Bill of Lading (BL) for mismatches. The repo has
-three parts that don't share code (no shared package/imports between them):
+several parts that don't share code (no shared package/imports between them):
 
 - `sdoc-hackathon-docker/` — **the organizers' kit** (dataset generator, FastAPI scoring
   server, Docker distribution). Treat this as upstream/reference material, not something to
   redesign — it defines the contract (schema, scoring formula, endpoints) everything else
   must satisfy.
-- `sdoc-hackathon-bundle/` — **the participant solution**: `pipeline.py` (classify + compare),
-  `backend.py` (a FastAPI review UI backend), and the static inbox data used for local dev.
-  This is where solution work happens.
-- `index.html` (repo root) — a static, self-contained HTML/CSS/JS mockup of the review UI
-  ("LADING — Document verification"). It currently renders from data hard-coded in its
-  `<script>` block, not from `backend.py`'s API — wiring it up is unfinished work, not a bug.
-- `frontend/` — a React + Vite + TypeScript app (see `hackathon-solution-plan.md`'s frontend
-  requirements) intended to become the real review UI, superseding the `index.html` mockup.
-  Not yet wired to `backend.py`.
+- `sdoc-hackathon-bundle/` — **the participant solution**: `pipeline.py` (classify + compare +
+  precompute the SI/BL field comparison), `supabase_sync.py` (syncs pipeline results into
+  Supabase), and the static inbox data used for local dev. This is where solution work happens.
+- `frontend/` — **the one review UI** (React + Vite + TypeScript): dashboard, inbox, review
+  queue, a classifier lab tab (testing the "identify document request" email-intent classifier
+  one email at a time), reports/analytics/settings placeholders. Talks to Supabase directly
+  (`frontend/src/api.ts`, `frontend/src/lib/supabase.ts`) — there is no backend process to run.
+  Dev server on port 5173.
+- `supabase/functions/identify-document-request/` — a Supabase Edge Function (Deno/TS) backing
+  the classifier lab tab: deterministic rules first, OpenRouter (`google/gemini-2.0-flash-001`)
+  second for ambiguous cases, persisted to Postgres. Separate from, and not reordered to match,
+  `pipeline.py`'s own NVIDIA→OpenRouter→keywords cascade (see below) — the two exist for
+  different use cases (interactive single-email testing vs. batch scoring), and
+  `frontend/src/components/ClassifierLabView.tsx` calls this Edge Function directly.
+- Repo root `tests/`/`scripts/` — the classifier logic's own tests
+  (`tests/document-classifier.test.ts`, Node's built-in test runner) and evaluation script
+  (`scripts/evaluate-classifier.mjs`), plus `tests/ui/classifier-page.spec.ts` (Playwright,
+  drives `frontend/`'s Classifier Lab tab). There is no app at the repo root anymore — the
+  standalone classifier-lab app that used to live at `src/`/`index.html` was folded into
+  `frontend/` as a tab; only its non-UI logic (`supabase/functions/`, these tests/scripts)
+  stayed at the root.
 
 ## Core principle — the model never decides
 
@@ -34,25 +46,49 @@ discrepancies — hold this line even under time pressure. See `hackathon-soluti
 the full rationale and per-field comparison rules (normalize-before-compare for names/ports,
 exact match for container count, unit-converted with rounding-only tolerance for weight).
 
-## Tech stack (target, per `hackathon-solution-plan.md`)
+## Tech stack
 
-- **Frontend:** React (`frontend/`), replacing the static `index.html` mockup.
-- **AI model:** `nvidia/nemotron-3-ultra-550b-a55b:free` via OpenRouter — text-only, no vision;
-  scanned/image-only attachments need an OCR pass (Tesseract.js) before reaching the model.
-  Free-tier rate limits: 20 req/min, 50 req/day until $10 of OpenRouter credit has ever been
-  purchased, then 1,000/day.
-- **Database:** not yet decided — needs one case record per email, extracted field values with
-  source spans, comparison verdicts, an append-only audit log, and review-queue state. Leaning
-  relational given the fixed 7-field SI/BL shape and cross-field audit queries.
-- **Cloud infrastructure:** not yet decided — needs managed storage for attachments/evidence,
-  on-demand compute for pipeline steps, and a way to push live case status to the frontend
-  (realtime or polling).
+- **Frontend:** React (`frontend/`, port 5173) — one app, talking to Supabase directly. See
+  "What this repo is" above.
+- **AI model:** `pipeline.py`'s classification cascade is **NVIDIA direct → OpenRouter → keyword
+  rules**: NVIDIA's own endpoint is tried first (`NVIDIA_API_KEY`, model
+  `nvidia/nemotron-3-ultra-550b-a55b`), then OpenRouter (`OPENROUTER_API_KEY`, model
+  `google/gemini-2.0-flash-001`) as a second opinion only if NVIDIA hard-fails, and only if
+  *both* fail does it fall back to `classify_keywords`. This is a deliberate deviation from the
+  original target of a single `nvidia/nemotron-3-ultra-550b-a55b:free` OpenRouter call — see
+  `pipeline.py`'s `LLMClassifier` for the actual implementation. OpenRouter's free tier (20
+  req/min, 50 req/day) is rate-limited hard enough that a prior full-dataset run without an
+  NVIDIA key exhausted it almost immediately; `OPENROUTER_MAX_CALLS_PER_RUN` (default 40) and an
+  immediate short-circuit on the first HTTP 429 exist specifically to prevent repeating that.
+  No vision model is used anywhere — text-only; scanned/image-only attachments would need an OCR
+  pass (not yet implemented) before reaching any model.
+- **Database:** **Supabase (Postgres)** is the live backend for `frontend/`. `pipeline.py` keeps
+  writing `submission.json` unconditionally (that's the scored contract and must never depend on
+  a network service); `supabase_sync.py` then best-effort-upserts the same results — including
+  the precomputed per-field SI/BL comparison (`field_comparison_rows()`) — into
+  `inbox_records`/`review_queue_items`/`review_resolutions` if `SUPABASE_URL` +
+  `SUPABASE_SERVICE_ROLE_KEY` are set. `pipeline.py` also writes a static
+  `frontend/public/case-data.json` snapshot of the same data; `frontend/src/api.ts` reads from
+  Supabase when `VITE_SUPABASE_URL`/`VITE_SUPABASE_PUBLISHABLE_KEY` are configured, else falls
+  back to fetching that local file — so the dashboard still works with zero external services,
+  it just won't reflect anything newer than the last `pipeline.py` run.
+- **Cloud infrastructure:** Supabase (Postgres + Edge Functions) — both `frontend/` and
+  `supabase/functions/identify-document-request/` depend on it directly.
+- **Security note:** `frontend/` queries Postgres with the anon/publishable key, which Row Level
+  Security applies to. `supabase/migrations/202609200001_pipeline_submissions.sql` adds narrow,
+  open (`using (true)`) policies scoped to exactly what the dashboard needs — read
+  `inbox_records`/`review_queue_items`, write `review_queue_items`/`review_resolutions`. There is
+  no auth/multi-tenancy anywhere in this project; this is a deliberate hackathon-scope tradeoff,
+  not an oversight. `classification_decisions`/`classification_runs` stay locked down — only the
+  Edge Function (service-role key, bypasses RLS) touches them.
 
 ## Open decisions to track
 
-- [ ] Database product (relational leaning, not committed).
-- [ ] Cloud/hosting provider for compute + storage + realtime updates.
-- [ ] Confirm Tesseract.js is sufficient for the OCR path, or pick a fallback.
+- [ ] Confirm/replace `google/gemini-2.0-flash-001` as the OpenRouter model, or switch it to
+      `nvidia/nemotron-3-ultra-550b-a55b:free` to match the original target model.
+- [ ] OCR path for scanned/image-only attachments (Tesseract.js proposed, not implemented).
+- [ ] Real auth, if this ever needs to be more than a single-reviewer hackathon demo — the open
+      RLS policies above assume it isn't.
 
 ## Commands
 
@@ -60,11 +96,13 @@ Run everything from `sdoc-hackathon-bundle/` unless noted.
 
 ```bash
 # Run the pipeline against the local bundle data, writing submission.json
+# (plus a Supabase sync + frontend/public/case-data.json snapshot, both best-effort)
 python pipeline.py
 # or: python pipeline.py <data-dir> <output.json>
-
-# Run the review-queue backend (serves submission.json + review_queue.json)
-uvicorn backend:app --reload --port 8000
+# Env vars: NVIDIA_API_KEY, OPENROUTER_API_KEY (both optional — falls back to
+# classify_keywords if unset/failing), OPENROUTER_MAX_CALLS_PER_RUN (default 40),
+# SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (optional — Supabase sync is skipped
+# without them, case-data.json is still written either way)
 
 # Score a submission (from the organizers' kit, needs ground_truth.json which
 # participants do NOT have — organizers run this, or use the Docker /submit endpoint)
@@ -75,7 +113,22 @@ python3 score_cli.py submission.json --json   # machine-readable
 docker compose up --build      # serves on http://localhost:8080
 ```
 
-There is no test suite, linter, or build step configured in this repo.
+```bash
+# The review UI — port 5173. Add frontend/.env.local (see frontend/.env.example) to
+# connect it to Supabase; without it, it reads frontend/public/case-data.json instead.
+cd frontend && npm install && npm run dev
+```
+
+From the repo root (classifier logic tests, not the UI):
+
+```bash
+npm install
+npm run test                # tests/document-classifier.test.ts (Node built-in runner)
+npm run evaluate:classifier # rule-only coverage/precision against the full dataset
+npx playwright test         # tests/ui/classifier-page.spec.ts, drives frontend/'s dev server
+```
+
+There is no test suite, linter, or build step configured for `sdoc-hackathon-bundle/`.
 
 ### Scoring a submission without the organizers
 
@@ -113,13 +166,17 @@ the main score directly.
 ### `sdoc-hackathon-bundle/pipeline.py` — the solution pipeline
 
 1. **Classify** (`classify_keywords` / `LLMClassifier.classify`): keyword rules are the
-   deterministic path (spam words → SI-request subject patterns → comparison subject/coded
-   patterns or `_si`+`_bl` attachment pairing → invoice terms → default `GENERAL`).
-   `LLMClassifier` optionally calls an NVIDIA-hosted model (`NVIDIA_API_KEY` env var) with an
-   on-disk cache (`llm_cache.json`) and falls back to `classify_keywords` on any failure,
-   logging the reason to `llm_fallbacks.log`. Order of the keyword checks matters — e.g.
-   SI-request patterns are checked before invoice terms because SI emails often list invoice
-   numbers too.
+   deterministic fallback path (spam words → SI-request subject patterns → comparison
+   subject/coded patterns or `_si`+`_bl` attachment pairing → invoice terms → default
+   `GENERAL`). Order of the keyword checks matters — e.g. SI-request patterns are checked
+   before invoice terms because SI emails often list invoice numbers too. `LLMClassifier.classify`
+   is a three-stage cascade: NVIDIA direct (`_request_label_nvidia`, `NVIDIA_API_KEY`) is tried
+   first; only if that hard-fails does it try OpenRouter (`_request_label_openrouter`,
+   `OPENROUTER_API_KEY`) as a second opinion, capped at `OPENROUTER_MAX_CALLS_PER_RUN` calls per
+   run and short-circuited immediately on the first HTTP 429; only if *both* fail does it call
+   `classify_keywords`. Results are cached on disk (`llm_cache.json`, keyed by `email_id`,
+   recording which provider produced each label) and every fallback reason from both providers
+   is logged to `llm_fallbacks.log` (`nvidia:<reason>;openrouter:<reason>`).
 2. **Extract attachment text** (`attachment_text`): dispatches on file suffix — `.txt` read
    directly, `.docx`/`.xlsx` parsed by hand via `zipfile` + `xml.etree` (no external deps),
    `.pdf` via the optional `pypdf` if installed, else treated as unreadable.
@@ -134,6 +191,12 @@ the main score directly.
 5. `run()`/`main()` wire it together: load the `Inbox`, classify all emails in parallel (2
    workers — the free-tier LLM's rate limit), compare `BL_COMPARISON` emails, write
    `submission.json` matching `sample_submission.json`'s shape (every `email_id` present).
+   `main()` then (best-effort, `submission.json` above is already written and unaffected by
+   either of these failing) computes `field_comparison_rows()` per `BL_COMPARISON` email — the
+   same per-field SI/BL values/match-mismatch status the review UI's case modal shows, ported
+   from what used to be `backend.py`'s on-demand `/emails/{id}` logic — and uses it to both sync
+   to Supabase (`supabase_sync.sync_submission`) and write `frontend/public/case-data.json` (the
+   no-Supabase-configured fallback snapshot for `frontend/src/api.ts`).
 
 ### `loader.py` — dual-mode data access (duplicated in both kits)
 
@@ -142,15 +205,22 @@ the main score directly.
 never see ground truth locally or over HTTP; scoring happens server-side (`/submit`) or via
 `score_cli.py` run by someone holding `ground_truth.json`.
 
-### `backend.py` — review UI API (separate from the scoring server)
+### `frontend/src/api.ts` — the review UI's data layer (no backend process)
 
-A small FastAPI app that does **not** re-run the pipeline — it loads the already-produced
-`submission.json` on startup, joins it against the inbox emails, and serves a review queue
-(`/emails`, `/emails/{id}`, `/review-queue`, `POST /review-queue/{id}/resolve`) for a human to
-work through `NEEDS_REVIEW` cases. `review_queue.json` persists queue state across restarts if
-present, otherwise it's rebuilt from `submission.json`'s `NEEDS_REVIEW` entries.
-`review_resolutions.json` accumulates resolution history (append-only). It expects a frontend
-dev server on `http://localhost:5173` (CORS-allowed) — none exists in this repo yet.
+There is no server between `frontend/` and Supabase — `api.ts` queries `inbox_records`/
+`review_queue_items`/`review_resolutions` directly via `@supabase/supabase-js`
+(`frontend/src/lib/supabase.ts`, using the anon/publishable key — see the RLS note above), for
+exactly the same four operations a prior `backend.py` FastAPI server used to provide
+(`fetchEmails`, `fetchEmailDetail`, `fetchReviewQueue`, `resolveReviewItem` — these exact
+exported names/types are unchanged, so every consuming component needed zero changes when
+`backend.py` was retired). When `VITE_SUPABASE_URL`/`VITE_SUPABASE_PUBLISHABLE_KEY` aren't set,
+each function instead reads from `frontend/public/case-data.json` (written by `pipeline.py`,
+see above); `resolveReviewItem` in that mode only mutates the in-memory copy for the rest of the
+session (there's no server to persist to without Supabase). Category values are translated
+between Python's `BL_COMPARISON`-style constants and Supabase's `comparison_request`-style
+column values via `frontend/src/lib/categories.ts` (kept in sync by hand with
+`supabase_sync.py`'s `CATEGORY_TO_SUPABASE`, the same manual-sync convention already used
+between `supabase_sync.py` and `scripts/evaluate-classifier.mjs`).
 
 ### `sdoc-hackathon-docker/` — organizers' kit (reference, not solution code)
 

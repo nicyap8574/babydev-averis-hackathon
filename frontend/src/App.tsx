@@ -18,13 +18,22 @@ import { PlaceholderView } from "./components/PlaceholderView";
 import { ReviewQueueView } from "./components/ReviewQueueView";
 import { CaseModal } from "./components/CaseModal";
 import { Toast } from "./components/Toast";
+import { ClassifierLabView } from "./components/ClassifierLabView";
 
-export type View = "dashboard" | "inbox" | "review" | "reports" | "analytics" | "settings";
+export type View =
+  | "dashboard"
+  | "inbox"
+  | "review"
+  | "classifier-lab"
+  | "reports"
+  | "analytics"
+  | "settings";
 
 const VIEW_TITLE: Record<View, string> = {
   dashboard: "",
   inbox: "Inbox",
   review: "Review queue",
+  "classifier-lab": "Classifier lab",
   reports: "Reports",
   analytics: "Analytics",
   settings: "Settings",
@@ -167,6 +176,12 @@ function App() {
           {!loadError && view === "review" && (
             <section className="view active">
               <ReviewQueueView items={reviewQueue} onOpen={setModalEmailId} onResolve={handleResolve} />
+            </section>
+          )}
+
+          {!loadError && view === "classifier-lab" && (
+            <section className="view active">
+              <ClassifierLabView />
             </section>
           )}
 
