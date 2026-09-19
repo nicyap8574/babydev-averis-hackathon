@@ -1,0 +1,25 @@
+{
+  "name": "lading-document-verification",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/document-classifier.test.ts",
+    "evaluate:classifier": "node scripts/evaluate-classifier.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.57.4",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "5.0.2",
+    "@playwright/test": "1.63.0",
+    "typescript": "5.9.2",
+    "vite": "7.3.6"
+  }
+}

@@ -1,0 +1,5 @@
+/hackathon-solution-plan.md
+/node_modules/
+/artifacts/playwright/
+/dist/
+/.env.local
