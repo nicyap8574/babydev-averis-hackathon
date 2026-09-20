@@ -17,3 +17,6 @@ sdoc-hackathon-bundle/submission_keywords_only*.json
 /.env.local
 /.env
 /.vite/
+
+# Presentation files
+presentation/

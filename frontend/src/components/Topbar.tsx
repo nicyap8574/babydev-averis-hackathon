@@ -1,8 +1,8 @@
 import { Icon } from "./IconSprite";
 
 interface TopbarProps {
-  eyebrow: string;
   title: string;
+  subtitle: string;
   search: string;
   onSearchChange: (value: string) => void;
   searchEnabled: boolean;
@@ -10,16 +10,24 @@ interface TopbarProps {
   onNewCase: () => void;
 }
 
-export function Topbar({ eyebrow, title, search, onSearchChange, searchEnabled, onMenuClick, onNewCase }: TopbarProps) {
+export function Topbar({
+  title,
+  subtitle,
+  search,
+  onSearchChange,
+  searchEnabled,
+  onMenuClick,
+  onNewCase,
+}: TopbarProps) {
   return (
     <header className="topbar">
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
         <button className="icon-button mobile-menu" aria-label="Open menu" onClick={onMenuClick}>
           <Icon id="i-menu" />
         </button>
-        <div>
-          <p className="eyebrow">{eyebrow}</p>
+        <div style={{ minWidth: 0 }}>
           <h1>{title}</h1>
+          <p className="topbar-sub">{subtitle}</p>
         </div>
       </div>
       <div className="top-actions">
@@ -31,15 +39,20 @@ export function Topbar({ eyebrow, title, search, onSearchChange, searchEnabled, 
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
             disabled={!searchEnabled}
+            aria-label="Search cases or senders"
           />
         </label>
         <button className="icon-button" aria-label="Notifications" disabled title="Not available in this build">
           <Icon id="i-bell" />
           <span className="notification-dot" />
         </button>
-        <button className="primary-button" onClick={onNewCase}>
+        <button
+          className="primary-button"
+          onClick={onNewCase}
+          title="Create a new case"
+        >
           <Icon id="i-plus" />
-          <span>New case</span>
+          <span>Test a case</span>
         </button>
       </div>
     </header>

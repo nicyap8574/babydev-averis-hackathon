@@ -14,12 +14,14 @@ import { Sidebar } from "./components/Sidebar";
 import { Topbar } from "./components/Topbar";
 import { MetricsRow } from "./components/MetricsRow";
 import { CaseTable } from "./components/CaseTable";
-import { ActivityPanel } from "./components/ActivityPanel";
+import { InsightsRail } from "./components/InsightsRail";
 import { PlaceholderView } from "./components/PlaceholderView";
+import { SettingsView } from "./components/SettingsView";
 import { AnalyticsView } from "./components/AnalyticsView";
 import { ReviewQueueView } from "./components/ReviewQueueView";
 import { CaseModal } from "./components/CaseModal";
 import { Toast } from "./components/Toast";
+import { GuideView } from "./components/GuideView";
 import { NewCaseModal } from "./components/NewCaseModal";
 
 export type View =
@@ -28,25 +30,36 @@ export type View =
   | "review"
   | "reports"
   | "analytics"
+  | "guide"
   | "settings";
 
-const VIEW_TITLE: Record<View, string> = {
-  dashboard: "",
-  inbox: "Inbox",
-  review: "Review queue",
-  reports: "Reports",
-  analytics: "Analytics",
-  settings: "Settings",
+type Theme = "light" | "dark";
+
+const VIEW_META: Record<Exclude<View, "dashboard">, [string, string]> = {
+  inbox: ["Inbox", "Every classified email across the shared shipping mailbox."],
+  review: ["Review queue", "Cases the pipeline escalated because it could not decide."],
+  reports: ["Reports", "Completed discrepancy reports and reviewer history."],
+  analytics: ["Analytics", "Classification and defect distribution across the run."],
+  guide: ["Help & guide", "A walkthrough of DocWise in the order you will use it."],
+  settings: ["Settings", "Field aliases, comparison tolerance, and model routing."],
 };
 
 function greeting(): string {
   const hour = new Date().getHours();
   const part = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
-  return `Good ${part}.`;
+  return `Good ${part}, BabyDevs`;
 }
 
 function today(): string {
   return new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+}
+
+function readStored<T extends string>(key: string, fallback: T): T {
+  try {
+    return (localStorage.getItem(key) as T | null) ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function App() {
@@ -55,6 +68,10 @@ function App() {
   const [view, setView] = useState<View>("dashboard");
   const [search, setSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(
+    () => readStored<"expanded" | "collapsed">("docwise.sidebar", "expanded") === "collapsed",
+  );
+  const [theme, setTheme] = useState<Theme>(() => readStored<Theme>("docwise.theme", "light"));
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [newCaseOpen, setNewCaseOpen] = useState(false);
@@ -78,6 +95,23 @@ function App() {
       .catch((error: Error) => setLoadError(error.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    try {
+      localStorage.setItem("docwise.theme", theme);
+    } catch {
+      /* private mode — the theme just won't persist */
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("docwise.sidebar", collapsed ? "collapsed" : "expanded");
+    } catch {
+      /* private mode — the collapse state just won't persist */
+    }
+  }, [collapsed]);
 
   useEffect(() => {
     if (!modalEmailId) return;
@@ -126,6 +160,11 @@ function App() {
     showToast("Review item resolved");
   };
 
+  const [title, subtitle] =
+    view === "dashboard"
+      ? [greeting(), today()]
+      : VIEW_META[view];
+
   const handleCreateCase = async (input: { subject: string; sender: string; body: string; files: File[] }) => {
     setCreatingCase(true);
     setCreateError(null);
@@ -148,19 +187,28 @@ function App() {
   return (
     <>
       <IconSprite />
-      <div className="app-shell">
+      <div className={`app-shell${collapsed ? " collapsed" : ""}`}>
         <Sidebar
           view={view}
           onNavigate={handleNavigate}
           open={sidebarOpen}
+          collapsed={collapsed}
+          onToggleCollapse={() => setCollapsed((value) => !value)}
           inboxCount={emails.length}
           reviewCount={pendingReviewCount}
         />
+        {sidebarOpen && (
+          <button
+            className="sidebar-scrim"
+            aria-label="Close menu"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
         <main className="main">
           <Topbar
-            eyebrow={view === "dashboard" ? today() : "DocWise workspace"}
-            title={view === "dashboard" ? greeting() : VIEW_TITLE[view]}
+            title={title}
+            subtitle={subtitle}
             search={search}
             onSearchChange={setSearch}
             searchEnabled={view === "dashboard" || view === "inbox"}
@@ -200,7 +248,7 @@ function App() {
                   pageSize={8}
                   onViewMore={() => handleNavigate("inbox")}
                 />
-                <ActivityPanel />
+                <InsightsRail emails={emails} reviewQueue={reviewQueue} />
               </div>
             </section>
           )}
@@ -221,9 +269,13 @@ function App() {
             <AnalyticsView emails={emails} reviewQueue={reviewQueue} />
           )}
 
-          {!loading && !loadError && (view === "reports" || view === "settings") && (
-            <PlaceholderView view={view} />
+          {!loadError && view === "guide" && <GuideView onNavigate={handleNavigate} />}
+
+          {!loadError && view === "settings" && (
+            <SettingsView theme={theme} onThemeChange={setTheme} />
           )}
+
+          {!loading && !loadError && view === "reports" && <PlaceholderView view={view} />}
         </main>
       </div>
 

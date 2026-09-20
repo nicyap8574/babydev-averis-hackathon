@@ -87,53 +87,49 @@ export function AnalyticsView({ emails, reviewQueue }: AnalyticsViewProps) {
   return (
     <section className="view active">
       <div className="metrics">
-        <article className="metric-card featured">
-          <div className="metric-label">
-            <span>Total processed</span>
+        <article className="metric-card" data-accent="blue">
+          <div className="metric-top">
             <span className="metric-icon"><Icon id="i-inbox" /></span>
           </div>
-          <div className="metric-value">{total}</div>
+          <span className="metric-label">Total processed</span>
+          <div className="metric-value">{total.toLocaleString()}</div>
           <div className="metric-note">
             <span>Classified emails in the shared inbox</span>
           </div>
         </article>
 
-        <article className="metric-card">
-          <div className="metric-label">
-            <span>Comparison requests</span>
+        <article className="metric-card" data-accent="purple">
+          <div className="metric-top">
             <span className="metric-icon"><Icon id="i-file" /></span>
           </div>
-          <div className="metric-value">{comparisonCount}</div>
+          <span className="metric-label">Comparison requests</span>
+          <div className="metric-value">{comparisonCount.toLocaleString()}</div>
           <div className="metric-note">
             <span className="trend">{pct(comparisonCount, total)}</span>
             <span>of the inbox</span>
           </div>
         </article>
 
-        <article className="metric-card">
-          <div className="metric-label">
-            <span>Mismatch rate</span>
-            <span className="metric-icon" style={{ color: "var(--red)", background: "var(--red-soft)" }}>
-              <Icon id="i-alert" />
-            </span>
+        <article className="metric-card" data-accent="red">
+          <div className="metric-top">
+            <span className="metric-icon"><Icon id="i-alert" /></span>
           </div>
+          <span className="metric-label">Mismatch rate</span>
           <div className="metric-value">{pct(mismatchCount, comparisonCount)}</div>
           <div className="metric-note">
-            <span style={{ color: "var(--red)", fontWeight: 800 }}>{mismatchCount}</span>
+            <span className="warn">{mismatchCount}</span>
             <span>of comparisons mismatched</span>
           </div>
         </article>
 
-        <article className="metric-card">
-          <div className="metric-label">
-            <span>Escalation rate</span>
-            <span className="metric-icon" style={{ color: "var(--amber)", background: "var(--amber-soft)" }}>
-              <Icon id="i-clock" />
-            </span>
+        <article className="metric-card" data-accent="amber">
+          <div className="metric-top">
+            <span className="metric-icon"><Icon id="i-clock" /></span>
           </div>
+          <span className="metric-label">Escalation rate</span>
           <div className="metric-value">{pct(reviewQueue.length, comparisonCount)}</div>
           <div className="metric-note">
-            <span style={{ color: "var(--amber)", fontWeight: 800 }}>{reviewQueue.length}</span>
+            <span className="hold">{reviewQueue.length}</span>
             <span>sent for human review</span>
           </div>
         </article>
