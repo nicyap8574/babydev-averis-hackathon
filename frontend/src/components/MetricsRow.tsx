@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Icon } from "./IconSprite";
 import type { EmailListItem, ReviewQueueItem } from "../api";
 
@@ -9,6 +10,29 @@ interface MetricsRowProps {
 function pct(part: number, total: number): string {
   if (total === 0) return "0%";
   return `${((part / total) * 100).toFixed(1)}%`;
+}
+
+interface MetricCardProps {
+  accent: "blue" | "green" | "red" | "amber";
+  icon: string;
+  label: string;
+  value: number;
+  children: ReactNode;
+}
+
+function MetricCard({ accent, icon, label, value, children }: MetricCardProps) {
+  return (
+    <article className="metric-card" data-accent={accent}>
+      <div className="metric-top">
+        <span className="metric-icon">
+          <Icon id={icon} />
+        </span>
+      </div>
+      <span className="metric-label">{label}</span>
+      <div className="metric-value">{value.toLocaleString()}</div>
+      <div className="metric-note">{children}</div>
+    </article>
+  );
 }
 
 export function MetricsRow({ emails, reviewQueue }: MetricsRowProps) {
@@ -26,58 +50,24 @@ export function MetricsRow({ emails, reviewQueue }: MetricsRowProps) {
 
   return (
     <div className="metrics">
-      <article className="metric-card featured">
-        <div className="metric-label">
-          <span>Total processed</span>
-          <span className="metric-icon"><Icon id="i-inbox" /></span>
-        </div>
-        <div className="metric-value">{total}</div>
-        <div className="metric-note">
-          <span>Classified emails in the shared inbox</span>
-        </div>
-      </article>
+      <MetricCard accent="blue" icon="i-inbox" label="Total processed" value={total}>
+        <span>Classified emails in the shared inbox</span>
+      </MetricCard>
 
-      <article className="metric-card">
-        <div className="metric-label">
-          <span>Clean documents</span>
-          <span className="metric-icon"><Icon id="i-check" /></span>
-        </div>
-        <div className="metric-value">{clean}</div>
-        <div className="metric-note">
-          <span className="trend">{pct(clean, total)}</span>
-          <span>no mismatch detected</span>
-        </div>
-      </article>
+      <MetricCard accent="green" icon="i-check" label="Clean documents" value={clean}>
+        <span className="trend">{pct(clean, total)}</span>
+        <span>no mismatch detected</span>
+      </MetricCard>
 
-      <article className="metric-card">
-        <div className="metric-label">
-          <span>Mismatches found</span>
-          <span className="metric-icon" style={{ color: "var(--red)", background: "var(--red-soft)" }}>
-            <Icon id="i-alert" />
-          </span>
-        </div>
-        <div className="metric-value">{mismatches}</div>
-        <div className="metric-note">
-          <span style={{ color: "var(--red)", fontWeight: 800 }}>{pct(mismatches, total)}</span>
-          <span>require attention</span>
-        </div>
-      </article>
+      <MetricCard accent="red" icon="i-alert" label="Mismatches found" value={mismatches}>
+        <span className="warn">{pct(mismatches, total)}</span>
+        <span>require attention</span>
+      </MetricCard>
 
-      <article className="metric-card">
-        <div className="metric-label">
-          <span>Awaiting review</span>
-          <span className="metric-icon" style={{ color: "var(--amber)", background: "var(--amber-soft)" }}>
-            <Icon id="i-clock" />
-          </span>
-        </div>
-        <div className="metric-value">{pending.length}</div>
-        <div className="metric-note">
-          <span style={{ color: "var(--amber)", fontWeight: 800 }}>
-            {topReason ? topReason[1] : 0}
-          </span>
-          <span>{topReason ? topReason[0].replace(/_/g, " ") : "in review queue"}</span>
-        </div>
-      </article>
+      <MetricCard accent="amber" icon="i-clock" label="Awaiting review" value={pending.length}>
+        <span className="hold">{topReason ? topReason[1] : 0}</span>
+        <span>{topReason ? topReason[0].replace(/_/g, " ") : "in review queue"}</span>
+      </MetricCard>
     </div>
   );
 }

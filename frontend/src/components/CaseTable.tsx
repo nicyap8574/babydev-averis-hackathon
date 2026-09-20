@@ -21,12 +21,6 @@ const STATUS_STYLE: Record<EmailStatus, { className: string; label: string }> = 
 
 const CATEGORIES: Category[] = ["BL_COMPARISON", "SI_REQUEST", "INVOICE_QUERY", "GENERAL", "SPAM"];
 
-function initials(from: string): string {
-  const domain = from.split("@")[1] ?? from;
-  const label = domain.split(".")[0] ?? domain;
-  return (label.slice(0, 2) || "??").toUpperCase();
-}
-
 export function CaseTable({ emails, onOpen, search, showFilter = false, paginate = false, pageSize = 8, onViewMore }: CaseTableProps) {
   const [filter, setFilter] = useState<"all" | "mismatch" | "review">("all");
   const [categoryFilters, setCategoryFilters] = useState<Category[]>([]);
@@ -109,7 +103,6 @@ export function CaseTable({ emails, onOpen, search, showFilter = false, paginate
                 <tr key={email.id} onClick={() => onOpen(email.id)}>
                   <td>
                     <div className="sender">
-                      <span className="sender-avatar">{initials(email.from)}</span>
                       <div className="sender-text">
                         <strong>{email.from}</strong>
                         <span>{email.subject}</span>
