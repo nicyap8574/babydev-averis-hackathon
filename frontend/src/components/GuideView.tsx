@@ -300,40 +300,6 @@ const STEPS: Step[] = [
     ),
   },
   {
-    key: "lab",
-    label: "Test an email",
-    title: "Try the classifier on your own email",
-    tagline: "Classifier lab",
-    body:
-      "The Classifier lab runs a single email through the intent classifier on demand. Paste a subject, body and attachment names, and it returns the category with the reasoning behind it — deterministic rules first, and a model only for the genuinely ambiguous cases.",
-    bullets: [
-      "Start from a sample email or paste your own",
-      "Shows which rule or model produced the answer",
-      "The “Test a case” button in the top bar lands here too",
-    ],
-    target: "classifier-lab",
-    targetLabel: "Open Classifier lab",
-    shot: (
-      <MockFrame active={-1}>
-        <MockHead title="Classifier lab" sub="Test the classifier one message at a time" />
-        <div className="guide-mock-lab">
-          <div className="guide-mock-form">
-            <i />
-            <i />
-            <i className="tall" />
-            <span />
-          </div>
-          <div className="guide-mock-verdict">
-            <b>BL_COMPARISON</b>
-            <em>matched: _si / _bl attachment pair</em>
-            <i />
-            <i />
-          </div>
-        </div>
-      </MockFrame>
-    ),
-  },
-  {
     key: "settings",
     label: "Make it yours",
     title: "Set it up the way you work",

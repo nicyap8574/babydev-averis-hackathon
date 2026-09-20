@@ -49,7 +49,7 @@ export function Topbar({
         <button
           className="primary-button"
           onClick={onNewCase}
-          title="Classify your own email"
+          title="Create a new case"
         >
           <Icon id="i-plus" />
           <span>Test a case</span>

@@ -19,10 +19,6 @@ const NAV_ITEMS: { view: View; icon: string; label: string; count?: "inbox" | "r
   { view: "analytics", icon: "i-chart", label: "Analytics" },
 ];
 
-const TOOLS_NAV_ITEMS: { view: View; icon: string; label: string }[] = [
-  { view: "classifier-lab", icon: "i-search", label: "Classifier lab" },
-];
-
 export function Sidebar({
   view,
   onNavigate,
@@ -81,11 +77,6 @@ export function Sidebar({
       <div className="nav-label">Workspace</div>
       <nav className="nav-list" aria-label="Main navigation">
         {NAV_ITEMS.map(renderItem)}
-      </nav>
-
-      <div className="nav-label">Tools</div>
-      <nav className="nav-list" aria-label="Tools navigation">
-        {TOOLS_NAV_ITEMS.map(renderItem)}
       </nav>
 
       <div className="sidebar-spacer" />

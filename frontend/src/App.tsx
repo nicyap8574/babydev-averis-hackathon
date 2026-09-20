@@ -4,11 +4,12 @@ import {
   fetchEmails,
   fetchReviewQueue,
   resolveReviewItem,
+  createCase,
   type EmailDetail,
   type EmailListItem,
   type ReviewQueueItem,
 } from "./api";
-import { IconSprite } from "./components/IconSprite";
+import { Icon, IconSprite } from "./components/IconSprite";
 import { Sidebar } from "./components/Sidebar";
 import { Topbar } from "./components/Topbar";
 import { MetricsRow } from "./components/MetricsRow";
@@ -20,14 +21,13 @@ import { AnalyticsView } from "./components/AnalyticsView";
 import { ReviewQueueView } from "./components/ReviewQueueView";
 import { CaseModal } from "./components/CaseModal";
 import { Toast } from "./components/Toast";
-import { ClassifierLabView } from "./components/ClassifierLabView";
 import { GuideView } from "./components/GuideView";
+import { NewCaseModal } from "./components/NewCaseModal";
 
 export type View =
   | "dashboard"
   | "inbox"
   | "review"
-  | "classifier-lab"
   | "reports"
   | "analytics"
   | "guide"
@@ -38,7 +38,6 @@ type Theme = "light" | "dark";
 const VIEW_META: Record<Exclude<View, "dashboard">, [string, string]> = {
   inbox: ["Inbox", "Every classified email across the shared shipping mailbox."],
   review: ["Review queue", "Cases the pipeline escalated because it could not decide."],
-  "classifier-lab": ["Classifier lab", "Test the email-intent classifier one message at a time."],
   reports: ["Reports", "Completed discrepancy reports and reviewer history."],
   analytics: ["Analytics", "Classification and defect distribution across the run."],
   guide: ["Help & guide", "A walkthrough of DocWise in the order you will use it."],
@@ -73,7 +72,11 @@ function App() {
     () => readStored<"expanded" | "collapsed">("docwise.sidebar", "expanded") === "collapsed",
   );
   const [theme, setTheme] = useState<Theme>(() => readStored<Theme>("docwise.theme", "light"));
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [newCaseOpen, setNewCaseOpen] = useState(false);
+  const [creatingCase, setCreatingCase] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const [modalEmailId, setModalEmailId] = useState<string | null>(null);
   const [modalDetail, setModalDetail] = useState<EmailDetail | null>(null);
@@ -89,7 +92,8 @@ function App() {
         setEmails(emailList);
         setReviewQueue(queue);
       })
-      .catch((error: Error) => setLoadError(error.message));
+      .catch((error: Error) => setLoadError(error.message))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -161,6 +165,25 @@ function App() {
       ? [greeting(), today()]
       : VIEW_META[view];
 
+  const handleCreateCase = async (input: { subject: string; sender: string; body: string; files: File[] }) => {
+    setCreatingCase(true);
+    setCreateError(null);
+    try {
+      const id = await createCase(input);
+      const [emailList, queue] = await Promise.all([fetchEmails(), fetchReviewQueue()]);
+      setEmails(emailList);
+      setReviewQueue(queue);
+      setNewCaseOpen(false);
+      showToast(`Case ${id.slice(0, 8)} created`);
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Could not create the case.");
+      // The database insert may have succeeded before a classifier error.
+      fetchEmails().then(setEmails).catch(() => undefined);
+    } finally {
+      setCreatingCase(false);
+    }
+  };
+
   return (
     <>
       <IconSprite />
@@ -190,16 +213,30 @@ function App() {
             onSearchChange={setSearch}
             searchEnabled={view === "dashboard" || view === "inbox"}
             onMenuClick={() => setSidebarOpen((open) => !open)}
-            onNewCase={() => handleNavigate("classifier-lab")}
+            onNewCase={() => { setCreateError(null); setNewCaseOpen(true); }}
           />
 
-          {loadError && (
-            <div className="panel" style={{ padding: 24, color: "var(--red)" }}>
-              Failed to load: {loadError}
-            </div>
+          {loading && (
+            <section className="panel workspace-state" role="status">
+              <span className="metric-icon"><Icon id="i-inbox" /></span>
+              <strong>Loading your workspace</strong>
+              <span>Connecting to your inbox and review queue…</span>
+            </section>
           )}
 
-          {!loadError && view === "dashboard" && (
+          {loadError && (
+            <section className="panel workspace-state" role="alert">
+              <span className="metric-icon"><Icon id="i-info" /></span>
+              <strong>
+                {loadError.startsWith("Supabase is not configured.")
+                  ? "Connect your Supabase workspace"
+                  : "Couldn’t load your workspace"}
+              </strong>
+              <span>{loadError}</span>
+            </section>
+          )}
+
+          {!loading && !loadError && view === "dashboard" && (
             <section className="view active">
               <MetricsRow emails={emails} reviewQueue={reviewQueue} />
               <div className="dashboard-grid">
@@ -216,25 +253,19 @@ function App() {
             </section>
           )}
 
-          {!loadError && view === "inbox" && (
+          {!loading && !loadError && view === "inbox" && (
             <section className="view active">
               <CaseTable emails={emails} onOpen={setModalEmailId} search={search} showFilter paginate pageSize={10} />
             </section>
           )}
 
-          {!loadError && view === "review" && (
+          {!loading && !loadError && view === "review" && (
             <section className="view active">
               <ReviewQueueView items={reviewQueue} onOpen={setModalEmailId} onResolve={handleResolve} />
             </section>
           )}
 
-          {!loadError && view === "classifier-lab" && (
-            <section className="view active">
-              <ClassifierLabView />
-            </section>
-          )}
-
-          {!loadError && view === "analytics" && (
+          {!loading && !loadError && view === "analytics" && (
             <AnalyticsView emails={emails} reviewQueue={reviewQueue} />
           )}
 
@@ -244,7 +275,7 @@ function App() {
             <SettingsView theme={theme} onThemeChange={setTheme} />
           )}
 
-          {!loadError && view === "reports" && <PlaceholderView view={view} />}
+          {!loading && !loadError && view === "reports" && <PlaceholderView view={view} />}
         </main>
       </div>
 
@@ -254,6 +285,14 @@ function App() {
         loading={modalLoading}
         error={modalError}
         onClose={() => setModalEmailId(null)}
+      />
+
+      <NewCaseModal
+        open={newCaseOpen}
+        saving={creatingCase}
+        error={createError}
+        onClose={() => setNewCaseOpen(false)}
+        onSubmit={handleCreateCase}
       />
 
       <Toast message={toastMessage} />

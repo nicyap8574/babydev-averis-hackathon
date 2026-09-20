@@ -1,32 +1,17 @@
-# React + TypeScript + Vite
+# Using DocWise
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+DocWise is one shared workspace for intake and review. Everyone with access to the workspace sees the same cases and uploaded documents.
 
-Currently, two official plugins are available:
+## As a user
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Open **Overview** to see recent cases, or **Inbox** to find a case by its subject, sender, or ID.
+2. Select **New case**, enter the sender, subject, and email message, and attach the SI/BL files when available. Select **Create case**. The case is saved to the shared Supabase database and the files go to its private `case-attachments` bucket.
+3. Open the case to see the classifier result. Existing pipeline submissions include the completed seven-field SI/BL comparison. Newly entered cases currently show **Awaiting comparison** until the hosted document extraction/comparison processor is connected.
+4. Use **Review queue** for cases that need a human resolution. Add a resolution note and resolve the item; it remains visible in the shared workspace.
+5. **Analytics** summarizes the cases that have comparison results.
 
-## React Compiler
+## Workspace setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The Vercel frontend needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. The Supabase project needs the migrations in `supabase/migrations/`, the `identify-document-request` Edge Function, and one or more Edge Function secrets: `GROQ_API_KEY`, `NVIDIA_API_KEY`, `CEREBRAS_API_KEY`. Never put a service-role or model key in Vercel/browser variables.
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+The current workspace is intentionally shared and has no sign-in. Anyone who can reach the app can submit cases and access shared case files. Set up the required Supabase migrations and function before using New case.
