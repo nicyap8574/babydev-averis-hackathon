@@ -2,7 +2,7 @@
 
 _Last run: 2026-09-20 13:07:36 (local)_
 
-Run of `python pipeline.py` against all **520 emails / 250 attachments** in `sdoc-hackathon-bundle/inbox` + `sdoc-hackathon-bundle/attachments`, using the current `pipeline.py` (post Tier-1 `missing_attachment`/`missing_value` fixes). No `NVIDIA_API_KEY` / `OPENROUTER_API_KEY` were set in this environment, so every email was classified via the deterministic `classify_keywords` fallback (no LLM calls made, no cache warmed — that step still needs to be run by whoever holds the API keys, see the note at the end).
+Run of `python pipeline.py` against all **520 emails / 250 attachments** in `sdoc-hackathon-bundle/inbox` + `sdoc-hackathon-bundle/attachments`, using the current `pipeline.py` (post Tier-1 `missing_attachment`/`missing_value` fixes). No model-provider API keys were set in this environment, so every email was classified via the deterministic `classify_keywords` fallback (no LLM calls made, no cache warmed — that step still needs to be run by whoever holds the API keys, see the note at the end).
 
 ## Summary
 
@@ -602,6 +602,6 @@ These 20 emails are the dataset's dedicated edge cases (5 each for `wrong_doc_ty
 
 ## Notes
 
-- **LLM cache not warmed**: this run had no `NVIDIA_API_KEY`/`OPENROUTER_API_KEY` in the environment, so classification used the deterministic keyword fallback for all 520 emails (no live model calls, `llm_cache.json` was not created). This doesn't affect the `BL_COMPARISON` field-comparison results above (extraction/comparison is independent of how an email was classified), but Tier-1 item #7 (warming the cache before demo day) still needs to be run separately by whoever holds the API keys.
+- **LLM cache not warmed**: this run had no model-provider API keys in the environment, so classification used the deterministic keyword fallback for all 520 emails (no live model calls, `llm_cache.json` was not created). This doesn't affect the `BL_COMPARISON` field-comparison results above (extraction/comparison is independent of how an email was classified), but Tier-1 item #7 (warming the cache before demo day) still needs to be run separately by whoever holds the API keys.
 - Ground truth (`ground_truth.json`) is not available to participants, so this run reports the pipeline's own output only — not scored accuracy against ground truth. Scoring requires the organizers' `score_cli.py` or the Docker `/submit` endpoint.
 

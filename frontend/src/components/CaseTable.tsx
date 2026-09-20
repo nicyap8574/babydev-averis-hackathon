@@ -104,7 +104,15 @@ export function CaseTable({ emails, onOpen, search, showFilter = false, paginate
           </thead>
           <tbody>
             {visible.map((email) => {
-              const style = STATUS_STYLE[email.status];
+              const style = email.status
+                ? STATUS_STYLE[email.status]
+                : email.workflow_status === "classification_failed"
+                  ? { className: "review", label: "Classification failed" }
+                  : email.workflow_status === "classifying"
+                    ? { className: "review", label: "Classifying" }
+                    : email.classification === "BL_COMPARISON"
+                      ? { className: "review", label: "Awaiting comparison" }
+                      : { className: "muted", label: "Not compared" };
               return (
                 <tr key={email.id} onClick={() => onOpen(email.id)}>
                   <td>
@@ -131,7 +139,7 @@ export function CaseTable({ emails, onOpen, search, showFilter = false, paginate
             {visible.length === 0 && (
               <tr>
                 <td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: "28px" }}>
-                  No cases match your search.
+                  {emails.length === 0 ? "No cases yet. Select New case to get started." : "No cases match your search."}
                 </td>
               </tr>
             )}

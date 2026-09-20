@@ -28,12 +28,12 @@ export function MetricsRow({ emails, reviewQueue }: MetricsRowProps) {
     <div className="metrics">
       <article className="metric-card featured">
         <div className="metric-label">
-          <span>Total processed</span>
+          <span>Total cases</span>
           <span className="metric-icon"><Icon id="i-inbox" /></span>
         </div>
         <div className="metric-value">{total}</div>
         <div className="metric-note">
-          <span>Classified emails in the shared inbox</span>
+          <span>Cases in the shared inbox</span>
         </div>
       </article>
 

@@ -7,9 +7,10 @@ interface TopbarProps {
   onSearchChange: (value: string) => void;
   searchEnabled: boolean;
   onMenuClick: () => void;
+  onNewCase: () => void;
 }
 
-export function Topbar({ eyebrow, title, search, onSearchChange, searchEnabled, onMenuClick }: TopbarProps) {
+export function Topbar({ eyebrow, title, search, onSearchChange, searchEnabled, onMenuClick, onNewCase }: TopbarProps) {
   return (
     <header className="topbar">
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -36,7 +37,7 @@ export function Topbar({ eyebrow, title, search, onSearchChange, searchEnabled, 
           <Icon id="i-bell" />
           <span className="notification-dot" />
         </button>
-        <button className="primary-button" disabled title="Case creation is not available in this build">
+        <button className="primary-button" onClick={onNewCase}>
           <Icon id="i-plus" />
           <span>New case</span>
         </button>

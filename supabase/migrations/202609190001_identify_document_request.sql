@@ -25,7 +25,7 @@ create table if not exists public.inbox_records (
     )),
   continue_to_extraction boolean not null default false,
   classification_method text
-    check (classification_method in ('deterministic', 'openrouter')),
+    check (classification_method in ('deterministic', 'groq', 'nvidia', 'cerebras')),
   classifier_version text,
   classification_input_hash text,
   classified_at timestamptz,
@@ -45,7 +45,7 @@ create table if not exists public.classification_decisions (
       'spam'
     )),
   continue_to_extraction boolean not null,
-  method text not null check (method = 'openrouter'),
+  method text not null check (method in ('groq', 'nvidia', 'cerebras')),
   model text not null,
   reasons jsonb not null default '[]'::jsonb,
   raw_model_output jsonb not null,
@@ -65,7 +65,7 @@ create table if not exists public.classification_runs (
       'spam'
     )),
   continue_to_extraction boolean not null,
-  method text not null check (method in ('deterministic', 'openrouter')),
+  method text not null check (method in ('deterministic', 'groq', 'nvidia', 'cerebras')),
   classifier_version text not null,
   model text,
   cache_hit boolean not null default false,
@@ -86,4 +86,4 @@ alter table public.classification_runs enable row level security;
 comment on column public.inbox_records.workflow_status is
   'Application-managed workflow state for the Supabase pipeline.';
 comment on column public.classification_decisions.raw_model_output is
-  'Complete OpenRouter response retained beside the reproducible final decision.';
+  'Complete model response retained beside the reproducible final decision.';

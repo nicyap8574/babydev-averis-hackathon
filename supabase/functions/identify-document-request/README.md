@@ -10,11 +10,11 @@ This Supabase Edge Function classifies one inbox record into:
 
 Only `comparison_request` returns `continue_to_extraction: true`.
 
-The deterministic rule pass reads the current subject and body. Attachment presence and attachment names are excluded from both rule scoring and the intent hash. Ambiguous inputs use the pinned OpenRouter model `google/gemini-2.0-flash-001` with temperature `0`, a fixed seed, strict structured output, and a Postgres decision cache. The complete model response is stored with the final decision for audit.
+The deterministic rule pass reads the current subject and body. Attachment presence and attachment names are excluded from both rule scoring and the intent hash. Ambiguous inputs use the Email Classifier AI Stack in order: three Groq models, NVIDIA Nemotron, then Cerebras Qwen. The complete model response is stored with the final decision for audit.
 
 ## Environment
 
-Set `OPENROUTER_API_KEY` as a Supabase function secret. Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the deployed function.
+Set one or more of `GROQ_API_KEY`, `NVIDIA_API_KEY`, and `CEREBRAS_API_KEY` as Supabase function secrets. Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the deployed function.
 
 ## Request
 

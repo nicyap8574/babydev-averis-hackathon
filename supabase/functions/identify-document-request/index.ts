@@ -6,7 +6,7 @@ import {
   type DecisionCache,
   type InboxRecord,
 } from "../_shared/document-classifier.ts";
-import { classifyWithOpenRouter } from "./openrouter.ts";
+import { classifyWithProvider } from "./providers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -106,10 +106,10 @@ Deno.serve(async (request) => {
           .maybeSingle();
         if (error) throw new Error(`Could not read decision cache: ${error.message}`);
         if (!data) return null;
-        if (!isDocumentCategory(data.category) || data.method !== "openrouter") return null;
+        if (!isDocumentCategory(data.category) || !["groq", "nvidia", "cerebras", "legacy"].includes(data.method)) return null;
         return {
           category: data.category,
-          method: "openrouter",
+          method: data.method as CachedDecision["method"],
           model: data.model,
           reasons: Array.isArray(data.reasons) ? data.reasons : [],
           raw_model_output: data.raw_model_output,
@@ -135,12 +135,9 @@ Deno.serve(async (request) => {
       },
     };
 
-    const openRouterApiKey = Deno.env.get("OPENROUTER_API_KEY");
     const result = await classifyInboxRecord(record, {
       cache,
-      classifyWithModel: openRouterApiKey
-        ? (input) => classifyWithOpenRouter(input, openRouterApiKey)
-        : undefined,
+      classifyWithModel: classifyWithProvider,
     });
     const workflowStatus = result.continue_to_extraction
       ? "ready_for_extraction"

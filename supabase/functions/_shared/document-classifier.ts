@@ -28,7 +28,7 @@ export interface InboxRecord {
 export interface ClassificationResult {
   category: DocumentCategory;
   continue_to_extraction: boolean;
-  method: "deterministic" | "openrouter";
+  method: "deterministic" | "groq" | "nvidia" | "cerebras" | "legacy";
   classifier_version: string;
   model: string | null;
   input_hash: string;
@@ -46,7 +46,7 @@ export interface ModelDecision {
 
 export interface CachedDecision {
   category: DocumentCategory;
-  method: "openrouter";
+  method: "groq" | "nvidia" | "cerebras" | "legacy";
   model: string;
   reasons: string[];
   raw_model_output: unknown;
@@ -316,7 +316,7 @@ export async function classifyInboxRecord(
   }
 
   if (!options.classifyWithModel) {
-    throw new Error("Ambiguous message requires the configured OpenRouter classifier");
+    throw new Error("Ambiguous message requires a configured Groq, NVIDIA, or Cerebras API key");
   }
 
   const modelDecision = await options.classifyWithModel({
@@ -325,12 +325,17 @@ export async function classifyInboxRecord(
     sender: senderFrom(record),
   });
   if (!isDocumentCategory(modelDecision.category)) {
-    throw new Error("OpenRouter returned an unsupported document category");
+    throw new Error("Email Classifier AI Stack returned an unsupported document category");
+  }
+
+  const method = modelDecision.model.split("/", 1)[0];
+  if (method !== "groq" && method !== "nvidia" && method !== "cerebras") {
+    throw new Error("Email Classifier AI Stack returned an unknown provider");
   }
 
   const cachedDecision: CachedDecision = {
     category: modelDecision.category,
-    method: "openrouter",
+    method,
     model: modelDecision.model,
     reasons: [modelDecision.rationale, ...deterministic.reasons],
     raw_model_output: modelDecision.raw_output,

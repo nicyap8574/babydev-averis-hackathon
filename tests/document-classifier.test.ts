@@ -135,7 +135,7 @@ test("all non-comparison labels stop before extraction", async () => {
   }
 });
 
-test("ambiguous inputs use OpenRouter once, retain raw output, and reuse the decision", async () => {
+test("ambiguous inputs use the provider stack once, retain raw output, and reuse the decision", async () => {
   const decisions = new Map<string, CachedDecision>();
   const cache: DecisionCache = {
     async get(inputHash) {
@@ -158,7 +158,7 @@ test("ambiguous inputs use OpenRouter once, retain raw output, and reuse the dec
       category: "general_message" as const,
       rationale: "The message has no document, SI, BL, invoice, or spam intent.",
       raw_output: { id: "generation-1", output: { category: "general_message" } },
-      model: "google/gemini-2.0-flash-001",
+      model: "groq/openai/gpt-oss-120b",
     };
   };
 
@@ -180,8 +180,8 @@ test("ambiguous inputs use OpenRouter once, retain raw output, and reuse the dec
 test("a concurrent ambiguous request returns the database-authoritative decision", async () => {
   const authoritative: CachedDecision = {
     category: "general_message",
-    method: "openrouter",
-    model: "google/gemini-2.0-flash-001",
+    method: "groq",
+    model: "groq/openai/gpt-oss-120b",
     reasons: ["Decision stored by the first concurrent request."],
     raw_model_output: { id: "first-request" },
   };
@@ -206,7 +206,7 @@ test("a concurrent ambiguous request returns the database-authoritative decision
         category: "invoice_query",
         rationale: "A competing response that must not win the cache race.",
         raw_output: { id: "second-request" },
-        model: "google/gemini-2.0-flash-001",
+        model: "groq/openai/gpt-oss-120b",
       };
     },
   });
