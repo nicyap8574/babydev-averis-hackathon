@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import {
   classifyInboxRecord,
   type InboxRecord,
-} from "../../../supabase/functions/_shared/document-classifier";
+} from "../lib/document-classifier";
 import {
   identifyDocumentRequest,
   type DocumentRequestDecision,
