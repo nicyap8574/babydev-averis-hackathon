@@ -21,7 +21,7 @@ export async function classifyWithOpenRouter(
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "X-Title": "LADING document request classifier",
+      "X-Title": "DocWise document request classifier",
     },
     body: JSON.stringify({
       model: OPENROUTER_MODEL,

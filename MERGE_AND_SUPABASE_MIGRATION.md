@@ -20,7 +20,7 @@ removed along the way.
 - **`frontend/`** — kept as the base app. All of its views survive unchanged: dashboard,
   inbox (search/filter/pagination), review queue (with a resolve workflow), the case comparison
   modal (side-by-side SI/BL field diff), and the reports/analytics/settings placeholders.
-- **The design system** — `mockup.css` (the "LADING" brand: dark-green sidebar, sage canvas,
+- **The design system** — `mockup.css` (the "DocWise" brand: dark-green sidebar, sage canvas,
   status colors, `Inter` font) is the visual system the whole consolidated app now uses,
   including the ported-in classifier lab tab.
 - **`pipeline.py`'s NVIDIA classifier** (`LLMClassifier`) — kept as the first stage of the new
