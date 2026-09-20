@@ -1209,7 +1209,7 @@
       "id": "email_021",
       "subject": "_RPA_ India HSS SD Billing Process Completed - LE HAVRE V.QI540A",
       "from": "hr@aprilasia.com",
-      "category": "GENERAL",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -5305,7 +5305,7 @@
       "id": "email_089",
       "subject": "15_01_2026 - UPDATE SUMMARY INDO SUKSES 65 V.51NW1",
       "from": "hr@aprilasia.com",
-      "category": "GENERAL",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -13796,7 +13796,7 @@
       "id": "email_230",
       "subject": "_Approval Required_ Time Off Request",
       "from": "operations@aprilasia.com",
-      "category": "GENERAL",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -14036,7 +14036,7 @@
       "id": "email_234",
       "subject": "_Reminder_Paper - Submit SI & AED_13-01-2026",
       "from": "hr@aprilasia.com",
-      "category": "GENERAL",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -15962,7 +15962,7 @@
       "id": "email_266",
       "subject": "07_01_2026 - UPDATE SUMMARY VISION 202 V.002",
       "from": "documentation@aprilasia.com",
-      "category": "GENERAL",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -25891,7 +25891,7 @@
       "id": "email_431",
       "subject": "_Reminder_Paper - Submit SI & AED_15-01-2026",
       "from": "documentation@aprilasia.com",
-      "category": "GENERAL",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -27631,7 +27631,7 @@
       "id": "email_460",
       "subject": "Pending BL Release 20_01_2026",
       "from": "noreply@aprilasia.com",
-      "category": "GENERAL",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -30397,8 +30397,8 @@
       "subject": "RE_ AFRT - LONG BEACH_US - EVER(EGLV433335384951) - 5RSG-19787 - 5250071809 - EAST BRIGHT FZ-LLC - OA_CFR",
       "from": "arlene_yamomo@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "OK",
-      "review_reason": null,
+      "status": "NEEDS_REVIEW",
+      "review_reason": "missing_attachment",
       "mismatches": [],
       "field_comparison": [
         {
@@ -30517,8 +30517,8 @@
       "subject": "AIE - CALLAO_PERU - EVER(EGLV577449160936) - 5RUS-14911 - 5250078941 - KPP-ANTALIS (SINGAPORE) PTE. LTD. - LC",
       "from": "elisa_tukiman@april.com.my",
       "category": "BL_COMPARISON",
-      "status": "OK",
-      "review_reason": null,
+      "status": "NEEDS_REVIEW",
+      "review_reason": "missing_attachment",
       "mismatches": [],
       "field_comparison": [
         {
@@ -30637,8 +30637,8 @@
       "subject": "TO CONFIRM DOCS _ 5RVN-06271 _ MERSIN_TURKEY _ SAFQA LIMITED _ OOLU0811260030",
       "from": "mj@fujitogrp.com",
       "category": "BL_COMPARISON",
-      "status": "OK",
-      "review_reason": null,
+      "status": "NEEDS_REVIEW",
+      "review_reason": "missing_attachment",
       "mismatches": [],
       "field_comparison": [
         {
@@ -31177,19 +31177,14 @@
       "subject": "AFPTME - BUSAN_SOUTH KOREA - OOCL(OOLU8177602991) - 5APH-33373 - 5250071255 - UAB NOVAKOPA - LC",
       "from": "deswita_elvyani@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "MISMATCH",
-      "review_reason": null,
-      "mismatches": [
-        "container_count",
-        "port_of_discharge",
-        "port_of_loading",
-        "shipper"
-      ],
+      "status": "NEEDS_REVIEW",
+      "review_reason": "missing_value",
+      "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": "CONSIGNEE: UAB NOVAKOPA",
+          "si_value": "",
           "bl_value": "ASIA PACIFIC PAPERBOARD TRADING PTE LTD",
           "status": "mismatch"
         },
@@ -31224,7 +31219,7 @@
         {
           "field": "container_count",
           "label": "Container Count",
-          "si_value": "Gross Weight\u6bdb\u91cd(KGS): 70,572 KG",
+          "si_value": "",
           "bl_value": "3 x 20'FCL",
           "status": "mismatch"
         },
@@ -31242,13 +31237,9 @@
       "subject": "RE_ AIE - PYEONGTAEK_SOUTH KOREA - MSC(MEDUUD032119) - 5RSG-63852 - 5250077789 - CLIFFORD PAPER INC - CFR",
       "from": "arlene_yamomo@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "MISMATCH",
-      "review_reason": null,
-      "mismatches": [
-        "consignee",
-        "port_of_discharge",
-        "port_of_loading"
-      ],
+      "status": "NEEDS_REVIEW",
+      "review_reason": "missing_value",
+      "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
@@ -31260,7 +31251,7 @@
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": "Notify: CLIFFORD PAPER INC",
+          "si_value": "",
           "bl_value": "CLIFFORD PAPER INC",
           "status": "mismatch"
         },
@@ -31465,6 +31456,13 @@
       "resolution": null
     },
     {
+      "email_id": "email_506",
+      "subject": "RE_ AFRT - LONG BEACH_US - EVER(EGLV433335384951) - 5RSG-19787 - 5250071809 - EAST BRIGHT FZ-LLC - OA_CFR",
+      "reason": "missing_attachment",
+      "resolved": false,
+      "resolution": null
+    },
+    {
       "email_id": "email_507",
       "subject": "RE_ TO CONFIRM DOCS _ 5AKR-00230 _ KOPER_SLOVENIA _ 3S PAPER PRODUCTS SDN BHD _ YMJAI530601198",
       "reason": "missing_attachment",
@@ -31472,8 +31470,22 @@
       "resolution": null
     },
     {
+      "email_id": "email_508",
+      "subject": "AIE - CALLAO_PERU - EVER(EGLV577449160936) - 5RUS-14911 - 5250078941 - KPP-ANTALIS (SINGAPORE) PTE. LTD. - LC",
+      "reason": "missing_attachment",
+      "resolved": false,
+      "resolution": null
+    },
+    {
       "email_id": "email_509",
       "subject": "AFRT - CALLAO_PERU - YM(YMJAI926322399) - 5RVN-11404 - 5250072886 - INTERNATIONAL FOREST PRODUCTS LLC - CFR",
+      "reason": "missing_attachment",
+      "resolved": false,
+      "resolution": null
+    },
+    {
+      "email_id": "email_510",
+      "subject": "TO CONFIRM DOCS _ 5RVN-06271 _ MERSIN_TURKEY _ SAFQA LIMITED _ OOLU0811260030",
       "reason": "missing_attachment",
       "resolved": false,
       "resolution": null
@@ -31530,6 +31542,20 @@
     {
       "email_id": "email_518",
       "subject": "RE_ Draft BL NAP 914 V.BS007 NANTONG - amend BL 045",
+      "reason": "missing_value",
+      "resolved": false,
+      "resolution": null
+    },
+    {
+      "email_id": "email_519",
+      "subject": "AFPTME - BUSAN_SOUTH KOREA - OOCL(OOLU8177602991) - 5APH-33373 - 5250071255 - UAB NOVAKOPA - LC",
+      "reason": "missing_value",
+      "resolved": false,
+      "resolution": null
+    },
+    {
+      "email_id": "email_520",
+      "subject": "RE_ AIE - PYEONGTAEK_SOUTH KOREA - MSC(MEDUUD032119) - 5RSG-63852 - 5250077789 - CLIFFORD PAPER INC - CFR",
       "reason": "missing_value",
       "resolved": false,
       "resolution": null
