@@ -1,6 +1,5 @@
 import { Icon } from "./IconSprite";
 import type { View } from "../App";
-import { supabase } from "../lib/supabase";
 
 interface SidebarProps {
   view: View;
@@ -32,7 +31,7 @@ export function Sidebar({ view, onNavigate, open, inboxCount, reviewCount }: Sid
           <Icon id="i-box" />
         </div>
         <div className="brand-copy">
-          <div className="brand-name">LADING</div>
+          <div className="brand-name">DOCWISE</div>
           <div className="brand-sub">Document intelligence</div>
         </div>
       </div>
@@ -78,17 +77,6 @@ export function Sidebar({ view, onNavigate, open, inboxCount, reviewCount }: Sid
       </nav>
 
       <div className="sidebar-spacer" />
-      <div className="system-card">
-        <div className="system-head">
-          <strong>{supabase ? "Supabase connected" : "Local mode"}</strong>
-          <span className="live-dot" />
-        </div>
-        <div className="system-copy">
-          {supabase ? "Live Postgres data" : "case-data.json snapshot"}
-          <br />
-          Pipeline results, no live re-run
-        </div>
-      </div>
       <div className="user-card">
         <div className="avatar">MY</div>
         <div className="user-copy">

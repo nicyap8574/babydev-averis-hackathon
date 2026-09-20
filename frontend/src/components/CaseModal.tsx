@@ -196,7 +196,6 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
                   </div>
                   <div className="document-stage">
                     <div className="paper">
-                      <div className="paper-watermark">ORIGINAL</div>
                       <div className="paper-title">
                         {docTab === "si" ? "SHIPPING INSTRUCTION" : "BILL OF LADING"}
                       </div>

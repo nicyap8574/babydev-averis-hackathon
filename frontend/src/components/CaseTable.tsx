@@ -90,11 +90,6 @@ export function CaseTable({ emails, onOpen, search, showFilter = false, paginate
               />
             </>
           )}
-          {onViewMore && (
-            <button className="text-button" onClick={onViewMore}>
-              View all →
-            </button>
-          )}
         </div>
       </div>
       <div className="table-scroll">
@@ -147,39 +142,41 @@ export function CaseTable({ emails, onOpen, search, showFilter = false, paginate
         <span>
           Showing {visible.length} of {filtered.length} cases
         </span>
-        <div className="pagination">
-          {paginate ? (
-            <>
-              <button
-                className="page"
-                disabled={currentPage <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                ‹
-              </button>
-              {Array.from({ length: pageCount }, (_, i) => i + 1)
-                .slice(Math.max(0, currentPage - 3), Math.max(0, currentPage - 3) + 5)
-                .map((n) => (
-                  <button
-                    key={n}
-                    className={`page${n === currentPage ? " active" : ""}`}
-                    onClick={() => setPage(n)}
-                  >
-                    {n}
-                  </button>
-                ))}
-              <button
-                className="page"
-                disabled={currentPage >= pageCount}
-                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-              >
-                ›
-              </button>
-            </>
-          ) : (
-            <button className="page active">1</button>
-          )}
-        </div>
+        {paginate ? (
+          <div className="pagination">
+            <button
+              className="page"
+              disabled={currentPage <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              ‹
+            </button>
+            {Array.from({ length: pageCount }, (_, i) => i + 1)
+              .slice(Math.max(0, currentPage - 3), Math.max(0, currentPage - 3) + 5)
+              .map((n) => (
+                <button
+                  key={n}
+                  className={`page${n === currentPage ? " active" : ""}`}
+                  onClick={() => setPage(n)}
+                >
+                  {n}
+                </button>
+              ))}
+            <button
+              className="page"
+              disabled={currentPage >= pageCount}
+              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            >
+              ›
+            </button>
+          </div>
+        ) : (
+          onViewMore && (
+            <button className="text-button" onClick={onViewMore}>
+              View all →
+            </button>
+          )
+        )}
       </div>
     </section>
   );
