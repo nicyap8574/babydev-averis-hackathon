@@ -129,6 +129,20 @@ export async function createCase(input: {
   if (classifyError) {
     throw new Error(`Case saved, but classification failed: ${classifyError.message}. The saved case remains in the inbox.`);
   }
+
+  // The comparison service re-reads the saved record and its private Storage
+  // attachments using server-side credentials. It is safe to call for every
+  // case: non-comparison categories return immediately.
+  const comparisonResponse = await fetch("/api/compare", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email_id: emailId }),
+  });
+  if (!comparisonResponse.ok) {
+    const failure = await comparisonResponse.json().catch(() => null) as { error?: unknown } | null;
+    const message = typeof failure?.error === "string" ? failure.error : "The document comparison service could not complete.";
+    throw new Error(`Case saved and classified, but comparison failed: ${message}`);
+  }
   return emailId;
 }
 

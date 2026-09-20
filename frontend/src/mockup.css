@@ -441,9 +441,19 @@ button[disabled]:hover { box-shadow: none; border-color: var(--line); text-decor
 .new-case-modal { width: min(620px, 96vw); }
 .new-case-fields { display: grid; gap: 16px; padding: 24px; }
 .new-case-fields label { display: grid; gap: 7px; color: var(--ink); font-size: 12px; font-weight: 700; }
-.new-case-fields input:not([type=file]), .new-case-fields textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; color: var(--ink); background: white; font: inherit; font-weight: 400; }
+.new-case-fields input:not([type=file]), .new-case-fields textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; color: var(--ink); background: var(--surface); font: inherit; font-weight: 400; }
+.new-case-fields input:not([type=file])::placeholder, .new-case-fields textarea::placeholder { color: var(--muted-2); opacity: 1; }
+.new-case-fields input:not([type=file]):-webkit-autofill { -webkit-text-fill-color: var(--ink); -webkit-box-shadow: 0 0 0 1000px var(--surface) inset; caret-color: var(--ink); }
 .new-case-fields textarea { resize: vertical; }
-.new-case-fields input[type=file] { max-width: 100%; color: var(--muted); font-size: 12px; }
+.attachment-field { display: grid; gap: 7px; }
+.field-label { color: var(--ink); font-size: 12px; font-weight: 700; }
+.file-picker { display: inline-flex; align-items: center; gap: 10px; width: fit-content; max-width: 100%; cursor: pointer; }
+.file-picker-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.file-picker-button { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); color: var(--ink); font-size: 12px; font-weight: 650; box-shadow: var(--shadow-sm); transition: .16s ease; }
+.file-picker-button svg { width: 15px; height: 15px; color: var(--accent); }
+.file-picker:hover .file-picker-button { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.file-picker:focus-within .file-picker-button { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.file-picker-status { overflow: hidden; color: var(--muted); font-size: 12px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
 .new-case-fields ul { margin: -6px 0 0; padding-left: 20px; color: var(--muted); font-size: 12px; }
 .new-case-fields .muted { color: var(--muted); font-weight: 400; }
 .new-case-footer { display: flex; justify-content: flex-end; gap: 9px; padding: 16px 24px; border-top: 1px solid var(--line); }

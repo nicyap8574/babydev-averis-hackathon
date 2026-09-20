@@ -33,13 +33,18 @@ export function NewCaseModal({ open, saving, error, onClose, onSubmit }: NewCase
           <label>Subject<input required maxLength={240} value={subject} onChange={(e) => setSubject(e.target.value)} /></label>
           <label>Sender<input type="email" required maxLength={320} value={sender} onChange={(e) => setSender(e.target.value)} placeholder="name@example.com" /></label>
           <label>Email message<textarea required rows={6} maxLength={20000} value={body} onChange={(e) => setBody(e.target.value)} /></label>
-          <label>Attachments <span className="muted">(PDF, DOCX, XLSX or text; up to 20 MB each)</span>
-            <input type="file" multiple accept=".pdf,.docx,.xlsx,.txt,.csv" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
-          </label>
+          <div className="attachment-field">
+            <span className="field-label">Attachments <span className="muted">(PDF, DOCX, XLSX or text; up to 20 MB each)</span></span>
+            <label className="file-picker">
+              <input className="file-picker-input" type="file" multiple accept=".pdf,.docx,.xlsx,.txt,.csv" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+              <span className="file-picker-button"><Icon id="i-upload" />Attach files</span>
+              <span className="file-picker-status">{files.length === 0 ? "No files selected" : `${files.length} file${files.length === 1 ? "" : "s"} selected`}</span>
+            </label>
+          </div>
           {files.length > 0 && <ul>{files.map((file) => <li key={`${file.name}-${file.size}`}>{file.name}</li>)}</ul>}
           {error && <p className="form-error" role="alert"><Icon id="i-info" />{error}</p>}
           <p className="muted">Uploaded documents are shared with everyone who can access this workspace.</p>
-          <p className="muted">Email intent is classified after saving. Hosted SI/BL document comparison is not enabled yet, so comparison cases will remain marked as awaiting comparison.</p>
+          <p className="muted">Email intent is classified after saving. SI/BL comparison cases are processed after classification.</p>
         </div>
         <footer className="new-case-footer">
           <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancel</button>
