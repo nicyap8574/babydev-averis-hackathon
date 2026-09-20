@@ -15,6 +15,7 @@ import { MetricsRow } from "./components/MetricsRow";
 import { CaseTable } from "./components/CaseTable";
 import { ActivityPanel } from "./components/ActivityPanel";
 import { PlaceholderView } from "./components/PlaceholderView";
+import { AnalyticsView } from "./components/AnalyticsView";
 import { ReviewQueueView } from "./components/ReviewQueueView";
 import { CaseModal } from "./components/CaseModal";
 import { Toast } from "./components/Toast";
@@ -121,11 +122,6 @@ function App() {
     showToast("Review item resolved");
   };
 
-  const sampleCaseId = useMemo(() => {
-    const firstMismatch = emails.find((e) => e.status === "MISMATCH");
-    return firstMismatch?.id ?? emails[0]?.id ?? null;
-  }, [emails]);
-
   return (
     <>
       <IconSprite />
@@ -140,7 +136,7 @@ function App() {
 
         <main className="main">
           <Topbar
-            eyebrow={view === "dashboard" ? today() : "LADING workspace"}
+            eyebrow={view === "dashboard" ? today() : "DocWise workspace"}
             title={view === "dashboard" ? greeting() : VIEW_TITLE[view]}
             search={search}
             onSearchChange={setSearch}
@@ -185,8 +181,12 @@ function App() {
             </section>
           )}
 
-          {!loadError && (view === "reports" || view === "analytics" || view === "settings") && (
-            <PlaceholderView view={view} onOpenSample={() => sampleCaseId && setModalEmailId(sampleCaseId)} />
+          {!loadError && view === "analytics" && (
+            <AnalyticsView emails={emails} reviewQueue={reviewQueue} />
+          )}
+
+          {!loadError && (view === "reports" || view === "settings") && (
+            <PlaceholderView view={view} />
           )}
         </main>
       </div>

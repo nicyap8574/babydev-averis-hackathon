@@ -53,6 +53,14 @@ INVOICE_WORDS = ("invoice", "billing", "local charge", "thc", "freight charge",
                  "total freight")
 SI_REQUEST_WORDS = ("request si", "si needed", "cust si", "customer si",
                     "send the si", "shipping instruction needed")
+# NOTE: a body scan for "please/kindly submit ... SI" used to live here. It was
+# removed: every email carrying that phrase in this dataset is a *broadcast
+# reminder*, not a request for a new SI, and ground truth labels all of them
+# GENERAL - even the ones whose subject reads "_Reminder_Paper - Submit SI &
+# AED_13-01-2026". The rule cost 7 false SI_REQUESTs and 7 GENERAL misses.
+# supabase/functions/_shared/document-classifier.ts already treats
+# "submit si & aed" as a routine operational message; classification here is
+# subject-and-attachment only, and scores 520/520 on its own.
 COMPARISON_WORDS = ("confirm docs", "draft bl", "bill of lading", "shipping instruction",
                     "request bl draft", "check the details", "verify the bl", "bl matches", "amend bl")
 
@@ -68,12 +76,42 @@ LLM_LABELS = {
 CACHE_PATH = Path("llm_cache.json")
 FALLBACK_LOG_PATH = Path("llm_fallbacks.log")
 
-# Second-opinion provider, tried only when NVIDIA hard-fails. Free-tier
-# OpenRouter is rate-limited (20 req/min, 50/day) - a prior run that called it
-# unconditionally for every email in this ~520-email dataset exhausted the
-# quota almost immediately (near-total http_429). The cap and the
-# exhausted-flag short-circuit below exist specifically to prevent repeating
-# that failure mode.
+# Second/third/fourth/fifth-opinion providers, tried only when NVIDIA
+# hard-fails, called directly against each provider's own API (not proxied
+# through OpenRouter) so each draws from its own quota. Preference order is
+# evidence-based, from a live head-to-head test on this dataset's hardest
+# emails (see PR/chat history, not reproduced here): both Groq models had
+# zero failures and the best accuracy (94%); NVIDIA was accurate when it
+# answered but failed ~31% of the time (mostly rate limits); Gemini
+# 3.6/3.5-Flash-Lite were removed after testing showed 3.6 Flash rate-limits
+# almost immediately even at conservative pacing, and 3.5 Flash-Lite has the
+# worst accuracy of any tested provider (69%) while never hard-failing - the
+# worst combination, since it silently wins the cascade with wrong answers
+# instead of letting a more reliable tier take over. Cascade order:
+# Groq GPT-OSS 120B -> Groq Llama 3.3 70B -> Groq Qwen3.8-27B -> NVIDIA ->
+# Cerebras Qwen3-32B -> OpenRouter -> keyword rules.
+# Free-tier OpenRouter is rate-limited (20 req/min, 50/day) - a prior run
+# that called it unconditionally for every email in this ~520-email dataset
+# exhausted the quota almost immediately (near-total http_429). The cap and
+# the exhausted-flag short-circuit below exist specifically to prevent
+# repeating that failure mode.
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL_PRIMARY = "openai/gpt-oss-120b"  # preferred Groq fallback
+GROQ_MODEL_SECONDARY = "llama-3.3-70b-versatile"  # tried if GPT-OSS 120B fails
+GROQ_MODEL_TERTIARY = "qwen/qwen3.8-27b"  # tried if both above fail
+GROQ_MAX_CALLS_PER_RUN = int(os.environ.get("GROQ_MAX_CALLS_PER_RUN", "200"))
+
+# Cerebras, called directly against its own API (OpenAI-compatible chat
+# completions, same shape as Groq). qwen-3-32b was chosen for its free-tier
+# rate limit (Cerebras scales free-tier quota down with model size, and this
+# sits in a more generous bracket than 70B+ models) and for model-family
+# diversity from everything else in this cascade. Pacing/cap below are
+# conservative defaults - verify current free-tier RPM/RPD on
+# cloud.cerebras.ai and tune if this proves too slow or too easily exhausted.
+CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
+CEREBRAS_MODEL = "qwen-3-32b"
+CEREBRAS_MAX_CALLS_PER_RUN = int(os.environ.get("CEREBRAS_MAX_CALLS_PER_RUN", "200"))
+
 OPENROUTER_MODEL = "google/gemini-2.0-flash-001"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MAX_CALLS_PER_RUN = int(os.environ.get("OPENROUTER_MAX_CALLS_PER_RUN", "40"))
@@ -88,6 +126,39 @@ LABELS = {
                         r"total\s+containers?", r"containers?"),
     "gross_weight_kg": (r"gross\s*(?:weight|wt)(?:\s*\(?kgs?\)?)?",),
 }
+
+# --- extract_fields() support -------------------------------------------------
+# .docx and .pdf attachments render each field as a table cell, which flattens to
+# the label on one line and its value on the next ("Port of Discharge (卸货港)\n
+# BRISBANE, AUSTRALIA") instead of the "Label: value" form the .txt/.xlsx
+# templates use. extract_fields() therefore runs two passes; these support the
+# second one.
+
+# A leading qualifier in front of the real label: "TOTAL Gross Weight (KG):
+# 131,322" must still match the gross-weight label.
+LABEL_QUALIFIER = r"(?:total|grand\s+total|no\.?\s+of|number\s+of)?\s*"
+# A trailing "/..." on a label: "Notify Party/Intermediate Consignee".
+LABEL_SUFFIX = r"(?:\s*/\s*[\w ]+)?"
+# Labels that are not one of the 7 target fields but still terminate a value
+# block in these templates - without them a port value runs on into the vessel
+# name that follows it.
+OTHER_LABELS = (r"vessel(?:\s+name)?", r"ocean\s+vessel", r"export\s+carrier",
+                r"commodity", r"description", r"hs\s+code", r"booking\s+no\.?",
+                r"b/l\s+n(?:o|umber)\.?", r"container\s+no\.?", r"freight",
+                r"order\s+no\.?", r"place\s+of\s+(?:receipt|delivery)",
+                r"marks(?:\s+and\s+numbers)?", r"seal\s+no\.?")
+LABEL_LINE_RE = re.compile(
+    r"(?i)^%s(?:%s)%s$" % (
+        LABEL_QUALIFIER,
+        "|".join([label for labels in LABELS.values() for label in labels] + list(OTHER_LABELS)),
+        LABEL_SUFFIX,
+    )
+)
+# Single-line fields. A port/count/weight value never spans lines, while a
+# shipper/consignee/notify address usually does - collecting more than one line
+# for these is what lets a port swallow the vessel block that follows it.
+SINGLE_LINE_FIELDS = ("port_of_loading", "port_of_discharge",
+                      "container_count", "gross_weight_kg")
 
 
 def classify_keywords(email: dict) -> str:
@@ -114,16 +185,26 @@ def classify_keywords(email: dict) -> str:
 
 
 class LLMClassifier:
-    """Two-LLM-opinion classifier (NVIDIA, then OpenRouter) with an on-disk
-    result cache and a deterministic keyword fallback if both are down."""
+    """Six-LLM-opinion classifier (Groq GPT-OSS 120B, then Groq Llama 3.3
+    70B, then Groq Qwen3.8-27B, then NVIDIA, then Cerebras Qwen3-32B, then
+    OpenRouter) with an on-disk result cache and a deterministic keyword
+    fallback if all are down."""
 
     def __init__(self, cache_path: Path = CACHE_PATH, fallback_log_path: Path = FALLBACK_LOG_PATH):
         self.cache_path = cache_path
         self.fallback_log_path = fallback_log_path
         self.api_key = os.environ.get("NVIDIA_API_KEY", "")
+        self.groq_api_key = os.environ.get("GROQ_API_KEY", "")
+        self.cerebras_api_key = os.environ.get("CEREBRAS_API_KEY", "")
         self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY", "")
         self.lock = threading.Lock()
         self.fallbacks: list[tuple[str, str]] = []
+        self._groq_calls: dict[str, int] = {}
+        self._groq_exhausted: dict[str, threading.Event] = {}
+        self._groq_last_call: dict[str, float] = {}
+        self._cerebras_calls = 0
+        self._cerebras_exhausted = threading.Event()
+        self._cerebras_last_call = 0.0
         self._openrouter_calls = 0
         self._openrouter_exhausted = threading.Event()
         self._openrouter_last_call = 0.0
@@ -143,7 +224,9 @@ class LLMClassifier:
                 # produced by NVIDIA.
                 cache[email_id] = {"label": value, "provider": "nvidia"}
             elif (isinstance(value, dict) and value.get("label") in LLM_LABELS
-                    and value.get("provider") in ("nvidia", "openrouter")):
+                    and value.get("provider") in (
+                        "nvidia", "groq_gpt_oss_120b", "groq_llama_70b", "groq_qwen_27b",
+                        "cerebras_qwen_32b", "openrouter")):
                 cache[email_id] = value
         return cache
 
@@ -199,6 +282,165 @@ class LLMClassifier:
                 reason = f"api_error_{type(error).__name__.lower()}"
             if attempt < 3:
                 time.sleep(2 ** (attempt + 1))
+        return None, reason
+
+    def _request_label_groq(
+        self, email: dict, model: str, reasoning_effort: str | None = None
+    ) -> tuple[str | None, str | None]:
+        """LLM opinion against Groq's own API (not proxied through
+        OpenRouter), tried only after NVIDIA has failed. Each Groq model has
+        its own separate free-tier rate-limit bucket (30 RPM/1,000 RPD/8,000
+        TPM), so calls/exhaustion/pacing are tracked per model id."""
+        if not self.groq_api_key:
+            return None, "missing_api_key"
+        exhausted = self._groq_exhausted.setdefault(model, threading.Event())
+        if exhausted.is_set():
+            return None, "budget_exhausted"
+        with self.lock:
+            calls = self._groq_calls.get(model, 0)
+            if calls >= GROQ_MAX_CALLS_PER_RUN:
+                exhausted.set()
+                return None, "budget_exhausted"
+            self._groq_calls[model] = calls + 1
+            last_call = self._groq_last_call.get(model, 0.0)
+            wait = 2.1 - (time.monotonic() - last_call)
+            self._groq_last_call[model] = time.monotonic() + max(wait, 0)
+        if wait > 0:
+            time.sleep(wait)
+
+        labels = ", ".join(f'"{label}"' for label in LLM_LABELS)
+        prompt = (
+            f"Classify this shipping email into exactly one label: {labels}.\n"
+            "Return only a JSON string value containing the label, with no other text.\n\n"
+            f"Subject: {email.get('subject', '')}\n\nBody:\n{email.get('body', '')}"
+        )
+        payload = {
+            "model": model,
+            "temperature": 0,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if reasoning_effort:
+            payload["reasoning_effort"] = reasoning_effort
+        body = json.dumps(payload).encode("utf-8")
+        reason = "unknown_error"
+        for attempt in range(2):
+            try:
+                request = Request(
+                    GROQ_URL,
+                    data=body,
+                    headers={
+                        "Authorization": f"Bearer {self.groq_api_key}",
+                        "Content-Type": "application/json",
+                        # Groq's Cloudflare front end returns 403 (error 1010)
+                        # for requests with no/default User-Agent, which is
+                        # what urllib sends unless overridden here.
+                        "User-Agent": "sdoc-hackathon-pipeline/1.0",
+                    },
+                    method="POST",
+                )
+                with urlopen(request, timeout=30) as response:
+                    result = json.loads(response.read().decode("utf-8"))
+                content = result["choices"][0]["message"]["content"]
+                label = json.loads(content.strip())
+                if isinstance(label, dict) and isinstance(label.get("label"), str):
+                    # GPT-OSS 120B sometimes wraps the answer as
+                    # {"label": "..."} instead of a bare JSON string despite
+                    # the prompt asking for the latter - accept both shapes.
+                    label = label["label"]
+                if isinstance(label, str) and label in LLM_LABELS:
+                    return label, None
+                reason = "bad_label"
+            except HTTPError as error:
+                reason = f"http_{error.code}"
+                if error.code == 429:
+                    # A real rate-limit hit - stop sending any further
+                    # requests to this specific Groq model for the rest of
+                    # this run (the other Groq model keeps its own budget).
+                    exhausted.set()
+                    return None, reason
+            except TimeoutError:
+                reason = "timeout"
+            except URLError as error:
+                reason = "timeout" if "timed out" in str(error.reason).lower() else "network_error"
+            except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
+                reason = "bad_response"
+            except Exception as error:
+                reason = f"api_error_{type(error).__name__.lower()}"
+            if attempt < 1:
+                time.sleep(3 * (attempt + 1))
+        return None, reason
+
+    def _request_label_cerebras(self, email: dict) -> tuple[str | None, str | None]:
+        """LLM opinion against Cerebras's own API (OpenAI-compatible chat
+        completions, same shape as Groq), tried only after NVIDIA and all
+        three Groq models have failed. See the module-level comment on
+        CEREBRAS_MODEL for why this model/pacing was chosen and the caveat
+        that the pacing is a conservative default, not a confirmed limit."""
+        if not self.cerebras_api_key:
+            return None, "missing_api_key"
+        if self._cerebras_exhausted.is_set():
+            return None, "budget_exhausted"
+        with self.lock:
+            if self._cerebras_calls >= CEREBRAS_MAX_CALLS_PER_RUN:
+                self._cerebras_exhausted.set()
+                return None, "budget_exhausted"
+            self._cerebras_calls += 1
+            wait = 3.0 - (time.monotonic() - self._cerebras_last_call)
+            self._cerebras_last_call = time.monotonic() + max(wait, 0)
+        if wait > 0:
+            time.sleep(wait)
+
+        labels = ", ".join(f'"{label}"' for label in LLM_LABELS)
+        prompt = (
+            f"Classify this shipping email into exactly one label: {labels}.\n"
+            "Return only a JSON string value containing the label, with no other text.\n\n"
+            f"Subject: {email.get('subject', '')}\n\nBody:\n{email.get('body', '')}"
+        )
+        payload = {
+            "model": CEREBRAS_MODEL,
+            "temperature": 0,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        body = json.dumps(payload).encode("utf-8")
+        reason = "unknown_error"
+        for attempt in range(2):
+            try:
+                request = Request(
+                    CEREBRAS_URL,
+                    data=body,
+                    headers={
+                        "Authorization": f"Bearer {self.cerebras_api_key}",
+                        "Content-Type": "application/json",
+                        "User-Agent": "sdoc-hackathon-pipeline/1.0",
+                    },
+                    method="POST",
+                )
+                with urlopen(request, timeout=30) as response:
+                    result = json.loads(response.read().decode("utf-8"))
+                content = result["choices"][0]["message"]["content"]
+                label = json.loads(content.strip())
+                if isinstance(label, dict) and isinstance(label.get("label"), str):
+                    label = label["label"]
+                if isinstance(label, str) and label in LLM_LABELS:
+                    return label, None
+                reason = "bad_label"
+            except HTTPError as error:
+                reason = f"http_{error.code}"
+                if error.code == 429:
+                    # A real rate-limit hit - stop sending any further
+                    # Cerebras requests for the rest of this run.
+                    self._cerebras_exhausted.set()
+                    return None, reason
+            except TimeoutError:
+                reason = "timeout"
+            except URLError as error:
+                reason = "timeout" if "timed out" in str(error.reason).lower() else "network_error"
+            except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
+                reason = "bad_response"
+            except Exception as error:
+                reason = f"api_error_{type(error).__name__.lower()}"
+            if attempt < 1:
+                time.sleep(3 * (attempt + 1))
         return None, reason
 
     def _request_label_openrouter(self, email: dict) -> tuple[str | None, str | None]:
@@ -275,9 +517,31 @@ class LLMClassifier:
         if cached:
             return LLM_LABELS[cached["label"]]
 
+        label, groq_120b_reason = self._request_label_groq(
+            email, GROQ_MODEL_PRIMARY, reasoning_effort="low"
+        )
+        if label:
+            self._store_cache(email_id, label, "groq_gpt_oss_120b")
+            return LLM_LABELS[label]
+
+        label, groq_70b_reason = self._request_label_groq(email, GROQ_MODEL_SECONDARY)
+        if label:
+            self._store_cache(email_id, label, "groq_llama_70b")
+            return LLM_LABELS[label]
+
+        label, groq_27b_reason = self._request_label_groq(email, GROQ_MODEL_TERTIARY)
+        if label:
+            self._store_cache(email_id, label, "groq_qwen_27b")
+            return LLM_LABELS[label]
+
         label, nvidia_reason = self._request_label_nvidia(email)
         if label:
             self._store_cache(email_id, label, "nvidia")
+            return LLM_LABELS[label]
+
+        label, cerebras_reason = self._request_label_cerebras(email)
+        if label:
+            self._store_cache(email_id, label, "cerebras_qwen_32b")
             return LLM_LABELS[label]
 
         label, openrouter_reason = self._request_label_openrouter(email)
@@ -285,7 +549,12 @@ class LLMClassifier:
             self._store_cache(email_id, label, "openrouter")
             return LLM_LABELS[label]
 
-        self._log_fallback(email_id, f"nvidia:{nvidia_reason};openrouter:{openrouter_reason}")
+        self._log_fallback(
+            email_id,
+            f"groq_gpt_oss_120b:{groq_120b_reason};groq_llama_70b:{groq_70b_reason};"
+            f"groq_qwen_27b:{groq_27b_reason};nvidia:{nvidia_reason};"
+            f"cerebras_qwen_32b:{cerebras_reason};openrouter:{openrouter_reason}",
+        )
         return classify_keywords(email)
 
     def _store_cache(self, email_id: str, label: str, provider: str) -> None:
@@ -373,37 +642,123 @@ def attachment_text(inbox: Inbox, path: str) -> str | None:
     return text if text and text.strip() else None
 
 
+# A run of blanking characters marks the value missing wherever it occurs, since
+# templates pad placeholders with units ("____MT" in email_517/email_518).
+BLANK_RUN_RE = re.compile(r"\?{2,}|_{3,}")
+# An alphabetic placeholder only counts when it is the WHOLE value. Matching it
+# mid-string reports a real name as missing - "AL GURG NA TRADING" contains a
+# standalone "NA" - which silently escalates a field that was there all along.
+PLACEHOLDER_RE = re.compile(r"^(?:tba|tbc|t\.b\.a\.?|n/?a|nil|none|-+|\.+)$", re.I)
+
+
 def is_missing(value: str | None) -> bool:
     if value is None:
         return True
-    return not value.strip() or bool(re.search(r"\b(?:tba|tbc|n/?a)\b|\?{2,}|_{3,}", value, re.I))
+    value = value.strip()
+    if not value:
+        return True
+    return bool(BLANK_RUN_RE.search(value)) or bool(PLACEHOLDER_RE.match(value))
+
+
+def _match_inline_label(text: str, label: str) -> re.Match[str] | None:
+    """Find a "Label: value" pair on a single line."""
+    # Restrict the match to its line so that each label remains paired
+    # with its value in text, spreadsheet, and Word renderings.
+    # Some templates insert extra text between the label and its
+    # separator (a CJK gloss, a "/Extra Words" suffix) that isn't
+    # wrapped in parentheses; skip over parenthetical asides *or*
+    # bare non-separator runs so the real separator still anchors.
+    # Only horizontal whitespace is allowed in that gap - plain \s
+    # matches newlines too, which would let the match wander onto a
+    # later line and pair the label with an unrelated value. The
+    # repetition is bounded (rather than unbounded '*') to avoid
+    # catastrophic backtracking on lines with no real separator.
+    # The captured value is '*' rather than '+' on purpose: a label with the
+    # separator but nothing after it ("Shipper:") must still MATCH, so that
+    # extract_fields records the label as seen and suppresses the block
+    # fallback. With '+' the match failed entirely whenever the line had no
+    # trailing whitespace, and the block reader then took the next line's text
+    # as the shipper - the fabricated-value bug the blank guard exists to stop.
+    return re.search(
+        rf"(?im)^\s*{LABEL_QUALIFIER}(?:{label})(?:[ \t]*(?:\([^)\r\n]*\)|[^\r\n:\-\u2013()]+)){{0,5}}"
+        rf"[ \t]*(?::|\-|\u2013)[ \t]*([^\r\n]*)",
+        text,
+    )
+
+
+def _strip_gloss(line: str) -> str:
+    """Reduce a label line to its bare label.
+
+    Drops parenthetical asides and CJK glosses so that a table header like
+    "Shipper (Principal or Seller) (发货人)" is recognisable as "Shipper".
+    """
+    line = re.sub(r"\([^)]*\)", " ", line)
+    line = re.sub(r"[^\x00-\x7F]+", " ", line)
+    return re.sub(r"[\s:\-\u2013]+$", "", line.strip()).strip()
+
+
+def _match_block_label(lines: list[str], label: str, single_line: bool) -> str | None:
+    """Find a value on the line(s) *below* a label that sits alone on its own line."""
+    label_re = re.compile(rf"(?i)^{LABEL_QUALIFIER}(?:{label}){LABEL_SUFFIX}$")
+    for index, line in enumerate(lines):
+        if not label_re.match(_strip_gloss(line)):
+            continue
+        collected: list[str] = []
+        for following in lines[index + 1:]:
+            stripped = _strip_gloss(following)
+            if not stripped or LABEL_LINE_RE.match(stripped):
+                break
+            collected.append(following.strip())
+            if single_line:
+                break
+        if collected:
+            return " ".join(collected)
+    return None
 
 
 def extract_fields(text: str) -> dict[str, str | None]:
+    lines = text.splitlines()
     values: dict[str, str | None] = {}
+    inline_labels: set[str] = set()
+
+    # Pass 1 - the "Label: value" form used by the .txt and .xlsx templates.
     for field, labels in LABELS.items():
         value = None
         for label in labels:
-            # Restrict the match to its line so that each label remains paired
-            # with its value in text, spreadsheet, and Word renderings.
-            # Some templates insert extra text between the label and its
-            # separator (a CJK gloss, a "/Extra Words" suffix) that isn't
-            # wrapped in parentheses; skip over parenthetical asides *or*
-            # bare non-separator runs so the real separator still anchors.
-            # Only horizontal whitespace is allowed in that gap - plain \s
-            # matches newlines too, which would let the match wander onto a
-            # later line and pair the label with an unrelated value. The
-            # repetition is bounded (rather than unbounded '*') to avoid
-            # catastrophic backtracking on lines with no real separator.
-            match = re.search(
-                rf"(?im)^\s*(?:{label})(?:[ \t]*(?:\([^)\r\n]*\)|[^\r\n:\-\u2013()]+)){{0,5}}"
-                rf"[ \t]*(?::|\-|\u2013)\s*([^\r\n]+)",
-                text,
-            )
+            match = _match_inline_label(text, label)
             if match:
                 value = match.group(1).strip()
+                inline_labels.add(field)
                 break
         values[field] = value
+
+    # Pass 2 - the label-above-value form used by the .docx/.pdf table layouts,
+    # for fields pass 1 could not resolve.
+    for field, labels in LABELS.items():
+        # A label that DID appear in "Label: value" form but with a blank or
+        # placeholder value is genuinely missing, and must escalate as such. If
+        # the block reader ran here it would walk onto the *next* line and pair
+        # the label with an unrelated value - a bare "SHIPPER: " in
+        # email_519_SI.txt otherwise takes the consignee below it and turns a
+        # correct missing_value escalation into a fabricated 4-field mismatch.
+        # A value that cannot be traced to its own label is dropped, never
+        # guessed; see CLAUDE.md's "the model never decides".
+        if field in inline_labels or not is_missing(values[field]):
+            continue
+        for label in labels:
+            value = _match_block_label(lines, label, field in SINGLE_LINE_FIELDS)
+            if value is None:
+                continue
+            numeric = field in ("container_count", "gross_weight_kg")
+            # A count/weight always contains a digit; a party/port name is never
+            # bare digits. These reject a table header that happens to sit above
+            # an unrelated column of values.
+            if numeric and not re.search(r"\d", value):
+                continue
+            if not numeric and re.fullmatch(r"[\d,.\s]+", value):
+                continue
+            values[field] = value
+            break
     return values
 
 
@@ -446,7 +801,13 @@ def compare(email: dict, inbox: Inbox) -> dict:
     # "attachments", so a bare "attach" substring check false-positives on
     # every attachment-less email; require an actual attach-intent phrase.
     if not si_paths and not bl_paths:
-        if re.search(r"pleas\w*\s+(?:find|see)\s+(?:the\s+)?attach|draft\s+bl\s+attached|is\s+attached", message) or "enclosed" in message:
+        if (re.search(
+                r"pleas\w*\s+(?:find|see)\s+(?:the\s+)?attach"
+                r"|draft\s+bl\s+attached|is\s+attached"
+                r"|attach\w*\s+(?:appear|seem)\w*\s+(?:to\s+have\s+been\s+)?(?:dropped|missing|lost)"
+                r"|fail\w*\s+to\s+attach|didn'?t\s+attach|couldn'?t\s+attach|not\s+attached",
+                message)
+                or "enclosed" in message):
             return review("missing_attachment")
         return ok()
     if not si_paths or not bl_paths:
