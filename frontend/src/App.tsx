@@ -122,11 +122,6 @@ function App() {
     showToast("Review item resolved");
   };
 
-  const sampleCaseId = useMemo(() => {
-    const firstMismatch = emails.find((e) => e.status === "MISMATCH");
-    return firstMismatch?.id ?? emails[0]?.id ?? null;
-  }, [emails]);
-
   return (
     <>
       <IconSprite />
@@ -141,7 +136,7 @@ function App() {
 
         <main className="main">
           <Topbar
-            eyebrow={view === "dashboard" ? today() : "LADING workspace"}
+            eyebrow={view === "dashboard" ? today() : "DocWise workspace"}
             title={view === "dashboard" ? greeting() : VIEW_TITLE[view]}
             search={search}
             onSearchChange={setSearch}
@@ -191,7 +186,7 @@ function App() {
           )}
 
           {!loadError && (view === "reports" || view === "settings") && (
-            <PlaceholderView view={view} onOpenSample={() => sampleCaseId && setModalEmailId(sampleCaseId)} />
+            <PlaceholderView view={view} />
           )}
         </main>
       </div>
