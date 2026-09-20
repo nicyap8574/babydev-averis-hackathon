@@ -184,61 +184,58 @@
       "id": "email_004",
       "subject": "REQUEST BL DRAFT _ PO 26067_ COATED IVORY BOARD__138MT",
       "from": "docs@vitalsolutions.sg",
-      "category": "BL_COMPARISON",
-      "status": "MISMATCH",
+      "category": "SI_REQUEST",
+      "status": "OK",
       "review_reason": null,
-      "mismatches": [
-        "consignee",
-        "notify_party"
-      ],
+      "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": "APRIL FAR EAST (M) SDN BHD",
-          "bl_value": "APRIL FAR EAST (M) SDN BHD",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": "EAST BRIGHT FZ-LLC",
-          "bl_value": "UAB NOVAKOPA",
-          "status": "mismatch"
+          "si_value": null,
+          "bl_value": null,
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": "EAST BRIGHT FZ-LLC",
-          "bl_value": "UAB NOVAKOPA",
-          "status": "mismatch"
+          "si_value": null,
+          "bl_value": null,
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": "NANTONG, CHINA (CNNTG)",
-          "bl_value": "NANTONG, CHINA (CNNTG)",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": "KARACHI, PAKISTAN (PKKHI)",
-          "bl_value": "KARACHI, PAKISTAN (PKKHI)",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
-          "si_value": "6 x 40'HC",
-          "bl_value": "6 x 40'HC",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": "131,058 KG",
-          "bl_value": "131,058 KG",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         }
       ]
@@ -727,60 +724,58 @@
       "id": "email_013",
       "subject": "AFEMY - MOMBASA_KENYA - CMA(SIJ4216073) - 5RFR-36541 - 5250074586 - ROXCEL TRADING GMBH - OA_CFR",
       "from": "sales@roxcel.at",
-      "category": "BL_COMPARISON",
-      "status": "MISMATCH",
+      "category": "SI_REQUEST",
+      "status": "OK",
       "review_reason": null,
-      "mismatches": [
-        "port_of_discharge"
-      ],
+      "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": "ASIA PACIFIC PAPERBOARD TRADING PTE LTD",
-          "bl_value": "ASIA PACIFIC PAPERBOARD TRADING PTE LTD",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": "ROXCEL TRADING GMBH",
-          "bl_value": "ROXCEL TRADING GMBH",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": "ROXCEL TRADING GMBH",
-          "bl_value": "ROXCEL TRADING GMBH",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": "SINGAPORE (SGSIN)",
-          "bl_value": "SINGAPORE (SGSIN)",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": "MOMBASA, KENYA (KEMBA)",
-          "bl_value": "TUTICORIN, INDIA (KEMBA)",
-          "status": "mismatch"
+          "si_value": null,
+          "bl_value": null,
+          "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
-          "si_value": "3 x 40'HC",
-          "bl_value": "3 x 40'HC",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": "67,311 KG",
-          "bl_value": "67,311 KG",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         }
       ]
@@ -2115,7 +2110,7 @@
       "id": "email_036",
       "subject": "Draft BL INDO SUKSES 65 V.51NW1 RUGAO/NANTONG/SHANGHAI - amend BL 041",
       "from": "hanna_azhari@aprilasia.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -2535,60 +2530,58 @@
       "id": "email_043",
       "subject": "RE_ AFRT - KLAIPEDA_LITHUANIA - CMA(SIJ5991022) - 5RAE-97643 - 5250078156 - PACIFIC OFFICE (M) SDN BHD - OA_CFR",
       "from": "mj@fujitogrp.com",
-      "category": "BL_COMPARISON",
-      "status": "MISMATCH",
+      "category": "SI_REQUEST",
+      "status": "OK",
       "review_reason": null,
-      "mismatches": [
-        "container_count"
-      ],
+      "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": "ASIA PACIFIC PAPERBOARD TRADING PTE LTD",
-          "bl_value": "ASIA PACIFIC PAPERBOARD TRADING PTE LTD",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": "PACIFIC OFFICE (M) SDN BHD",
-          "bl_value": "PACIFIC OFFICE (M) SDN BHD",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": "PACIFIC OFFICE (M) SDN BHD",
-          "bl_value": "PACIFIC OFFICE (M) SDN BHD",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": "NHAVA SHEVA, INDIA (INNSA)",
-          "bl_value": "NHAVA SHEVA, INDIA (INNSA)",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": "KLAIPEDA, LITHUANIA (LTKLJ)",
-          "bl_value": "KLAIPEDA, LITHUANIA (LTKLJ)",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
-          "si_value": "3 x 20'GP",
-          "bl_value": "5 x 20'GP",
-          "status": "mismatch"
+          "si_value": null,
+          "bl_value": null,
+          "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": "68,649 KG",
-          "bl_value": "68,649 KG",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         }
       ]
@@ -3259,59 +3252,59 @@
       "id": "email_055",
       "subject": "AIE - KARACHI_PAKISTAN - PIL(SIN616928451) - 5AKR-57059 - 5250076401 - AL GURG STATIONERY LLC - OA",
       "from": "nirmala@fujitogrp.com",
-      "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
+      "category": "SI_REQUEST",
+      "status": "OK",
+      "review_reason": null,
       "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": "APRIL FINE PAPER TRADING | ON BEHALF OF VITAL SOLUTIONS PTE LTD; 77 ROBINSON ROAD, #21-01; SINGAPORE 068896",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": "AL GURG STATIONERY LLC | P.O. BOX 5069; DUBAI, UNITED ARAB EMIRATES",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": "AL GURG STATIONERY LLC | P.O. BOX 5069; DUBAI, UNITED ARAB EMIRATES",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": "SINGAPORE",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": "KARACHI, PAKISTAN",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
-          "si_value": "12 x 20'FCL",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": "243588",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         }
       ]
     },
@@ -3439,7 +3432,7 @@
       "id": "email_058",
       "subject": "RE_ AFEMY - MERSIN_TURKEY - YM(YMJAI782911467) - 5RVN-78528 - 5250079226 - CLIFFORD PAPER INC - CFR",
       "from": "logistics@algurg.ae",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -3447,50 +3440,50 @@
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": "APRIL FINE PAPER TRADING",
-          "bl_value": "APRIL FINE PAPER TRADING",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": "CLIFFORD PAPER INC",
-          "bl_value": "CLIFFORD PAPER INC",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": "CLIFFORD PAPER INC",
-          "bl_value": "CLIFFORD PAPER INC",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": "SINGAPORE (SGSIN)",
-          "bl_value": "SINGAPORE (SGSIN)",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": "MERSIN, TURKEY (TRMER)",
-          "bl_value": "MERSIN, TURKEY (TRMER)",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
-          "si_value": "4 x 40'HC",
-          "bl_value": "4 x 40'HC",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": "81,512 KG",
-          "bl_value": "81,512 KG",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         }
       ]
@@ -3500,44 +3493,44 @@
       "subject": "REQUEST BL DRAFT _ PO 26000_ UNCOATED WOODFREE PAPER IN REA__126MT",
       "from": "elisa_tukiman@april.com.my",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
+      "status": "OK",
+      "review_reason": null,
       "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "APRIL FINE PAPER TRADING ON BEHALF OF VITAL SOLUTIONS PTE LTD 77 ROBINSON ROAD, #21-01 SINGAPORE 068896",
+          "bl_value": "APRIL FINE PAPER TRADING ON BEHALF OF VITAL SOLUTIONS PTE LTD 77 ROBINSON ROAD, #21-01 SINGAPORE 068896",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "BALL & DOGGETT AUSTRALIA PTY LTD 43-45 METROPOLITAN ROAD ENFIELD NSW 2136, AUSTRALIA",
+          "bl_value": "BALL & DOGGETT AUSTRALIA PTY LTD 43-45 METROPOLITAN ROAD ENFIELD NSW 2136, AUSTRALIA",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "PACIFIC OFFICE (M) SDN BHD LOT 6, JALAN P/7 SECTION 13, 43650 BANDAR BARU BANGI SELANGOR, MALAYSIA",
+          "bl_value": "PACIFIC OFFICE (M) SDN BHD LOT 6, JALAN P/7 SECTION 13, 43650 BANDAR BARU BANGI SELANGOR, MALAYSIA",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "BUATAN, INDONESIA",
+          "bl_value": "BUATAN, INDONESIA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "FREMANTLE, AUSTRALIA",
+          "bl_value": "FREMANTLE, AUSTRALIA",
+          "status": "match"
         },
         {
           "field": "container_count",
@@ -3549,9 +3542,9 @@
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "131,322 KG",
+          "bl_value": "131,322 KG",
+          "status": "match"
         }
       ]
     },
@@ -4585,7 +4578,7 @@
       "id": "email_077",
       "subject": "RE_ AFPTME - YANGON_MYANMAR - MSC(MEDUUD392614) - 5AAT-85621 - 5250078501 - KPP-ANTALIS (SINGAPORE) PTE. LTD. - OA_CFR",
       "from": "hari_mardianto@aprilasia.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -4825,7 +4818,7 @@
       "id": "email_081",
       "subject": "RE_ TO CONFIRM DOCS _ 5RCY-74167 _ AQABA_JORDAN _ MOORIM SP CO., LTD _ YMJAI793564651",
       "from": "mj@fujitogrp.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -5125,7 +5118,7 @@
       "id": "email_086",
       "subject": "_Reminder_Paper - Submit SI & AED_10-01-2026",
       "from": "noreply@aprilasia.com",
-      "category": "GENERAL",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -5245,7 +5238,7 @@
       "id": "email_088",
       "subject": "RE_ Draft BL MMSS 2507 V.257087E NANTONG - amend BL 056",
       "from": "sathiya@april.com.my",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -5487,7 +5480,7 @@
       "id": "email_092",
       "subject": "AFPTME - CEBU_PHILIPPINES - YM(YMJAI121965652) - 5SUS-04389 - 5250078364 - INTERNATIONAL FOREST PRODUCTS LLC - DP",
       "from": "logistics@algurg.ae",
-      "category": "BL_COMPARISON",
+      "category": "GENERAL",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -5667,7 +5660,7 @@
       "id": "email_095",
       "subject": "AFEMY - TUTICORIN_INDIA - ONE(SINF41056481) - 5ALT-85079 - 5250072524 - BALL & DOGGETT AUSTRALIA PTY LTD - OA_CFR",
       "from": "faraz_ali@aprilasia.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -5787,59 +5780,59 @@
       "id": "email_097",
       "subject": "Draft BL MARCOPOLO 810 V.BS005 SINGAPORE - amend BL 055",
       "from": "sales@roxcel.at",
-      "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
+      "category": "SI_REQUEST",
+      "status": "OK",
+      "review_reason": null,
       "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE | #813, 4 EA, DUBAI AIRPORT FREE ZONE; P.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": "ROXCEL TRADING GMBH | OPERNRING 3-5; 1010 VIENNA, AUSTRIA",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": "NAGAPPA EXPORTS | NEW NO : 23, L-BLOCK, 17TH STREET; ANNA NAGAR EAST; CHENNAI, TAMIL NADU 600102; GST NO - 33AACFN6792L1ZU",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": "SINGAPORE",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": "BRISBANE, AUSTRALIA",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
-          "si_value": "10 x 40'HC",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": "216950",
+          "si_value": null,
           "bl_value": null,
-          "status": "mismatch"
+          "status": "match"
         }
       ]
     },
@@ -5967,7 +5960,7 @@
       "id": "email_100",
       "subject": "Draft BL NAP 914 V.BS007 RUGAO/NANTONG/SHANGHAI - amend BL 053",
       "from": "mitchelle_ting@aprilasia.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -6267,7 +6260,7 @@
       "id": "email_105",
       "subject": "AFPTME - VALPARAISO_CHILE - EVER(EGLV895392644220) - 5RUS-95939 - 5250071725 - KTP CO., LTD - OA_CFR",
       "from": "exports@ifpla.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -6388,58 +6381,61 @@
       "subject": "TO CONFIRM DOCS _ 5RFR-36884 _ MOMBASA_KENYA _ KTP CO., LTD _ OOLU1815997062",
       "from": "hari_mardianto@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
-      "mismatches": [],
+      "status": "MISMATCH",
+      "review_reason": null,
+      "mismatches": [
+        "consignee",
+        "container_count"
+      ],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
           "si_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE | #813, 4 EA, DUBAI AIRPORT FREE ZONE; P.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE#813, 4 EA, DUBAI AIRPORT FREE ZONEP.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
           "si_value": "KTP CO., LTD | KTP BLDG., 36 SANGWON-GIL; SEOUNGDONG-GU, SEOUL, SOUTH KOREA; TEL:02-2285-6025",
-          "bl_value": null,
+          "bl_value": "VITAL SOLUTIONS PTE. LTD.KTP BLDG., 36 SANGWON-GILSEOUNGDONG-GU, SEOUL, SOUTH KOREATEL:02-2285-6025",
           "status": "mismatch"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
           "si_value": "KTP CO., LTD | KTP BLDG., 36 SANGWON-GIL; SEOUNGDONG-GU, SEOUL, SOUTH KOREA; TEL:02-2285-6025",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "KTP CO., LTDKTP BLDG., 36 SANGWON-GILSEOUNGDONG-GU, SEOUL, SOUTH KOREATEL:02-2285-6025",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
           "si_value": "PORT KLANG (WESTPORT), MALAYSIA",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "PORT KLANG (WESTPORT), MALAYSIA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
           "si_value": "MOMBASA, KENYA",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "MOMBASA, KENYA",
+          "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
           "si_value": "2 x 40'HC",
-          "bl_value": null,
+          "bl_value": "3 x 40'HC",
           "status": "mismatch"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
           "si_value": "41124",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "41,124",
+          "status": "match"
         }
       ]
     },
@@ -6507,7 +6503,7 @@
       "id": "email_109",
       "subject": "RE_ AIE - JEBEL ALI_UAE - ONE(SINF21158693) - 5ALT-87937 - 5250074160 - CLIFFORD PAPER INC - DP",
       "from": "exports@ifpla.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -6749,7 +6745,7 @@
       "id": "email_113",
       "subject": "RE_ Draft BL SOLID 16 V.044NW2 NHAVA SHEVA - amend BL 044",
       "from": "chella.perumal@psabdp.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -6757,50 +6753,50 @@
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": "APRIL FAR EAST (M) SDN BHD",
-          "bl_value": "APRIL FAR EAST (M) SDN BHD",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": "CERIEX",
-          "bl_value": "CERIEX",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": "CERIEX",
-          "bl_value": "CERIEX",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": "NHAVA SHEVA, INDIA (INNSA)",
-          "bl_value": "NHAVA SHEVA, INDIA (INNSA)",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": "BRISBANE, AUSTRALIA (AUBNE)",
-          "bl_value": "BRISBANE, AUSTRALIA (AUBNE)",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
-          "si_value": "2 x 20'GP",
-          "bl_value": "2 x 20'GP",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": "45,006 KG",
-          "bl_value": "45,006 KG",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         }
       ]
@@ -6809,7 +6805,7 @@
       "id": "email_114",
       "subject": "Draft BL NAP 914 V.BS007 NHAVA SHEVA - amend BL 051",
       "from": "mj@fujitogrp.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -7716,61 +7712,58 @@
       "id": "email_129",
       "subject": "REQUEST BL DRAFT _ PO 26680_ COATED IVORY BOARD__126MT",
       "from": "eileen_teo@aprilasia.com",
-      "category": "BL_COMPARISON",
-      "status": "MISMATCH",
+      "category": "SI_REQUEST",
+      "status": "OK",
       "review_reason": null,
-      "mismatches": [
-        "port_of_discharge",
-        "port_of_loading"
-      ],
+      "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": "APRIL FINE PAPER TRADING",
-          "bl_value": "APRIL FINE PAPER TRADING",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": "SAFQA LIMITED",
-          "bl_value": "SAFQA LIMITED",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": "SAFQA LIMITED",
-          "bl_value": "SAFQA LIMITED",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": "NHAVA SHEVA, INDIA (INNSA)",
-          "bl_value": "BUATAN, INDONESIA (INNSA)",
-          "status": "mismatch"
+          "si_value": null,
+          "bl_value": null,
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": "ASHDOD, ISRAEL (ILASH)",
-          "bl_value": "TUTICORIN, INDIA (ILASH)",
-          "status": "mismatch"
+          "si_value": null,
+          "bl_value": null,
+          "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
-          "si_value": "6 x 40'HC",
-          "bl_value": "6 x 40'HC",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": "124,188 KG",
-          "bl_value": "124,188 KG",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         }
       ]
@@ -8441,7 +8434,7 @@
       "id": "email_141",
       "subject": "RE_ TO CONFIRM DOCS _ 5APH-77739 _ HOUSTON_US _ HABRAS INTERNATIONAL LIMITED _ SINF84322259",
       "from": "guancheng_lee@april.com.my",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -9106,7 +9099,7 @@
       "id": "email_152",
       "subject": "AIE - BALTIMORE_US - HAPAG(HLCUSIN434795527) - 5RSG-29293 - 5250071438 - ORIENT LINKS CO (LLC) - CFR",
       "from": "logistics@algurg.ae",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -9466,7 +9459,7 @@
       "id": "email_158",
       "subject": "AFEMY - PYEONGTAEK_SOUTH KOREA - MSC(MEDUUD368663) - 5SUS-16389 - 5250074484 - TOAN LUC PAPER JOINT STOCK COMPANY - DP",
       "from": "deswita_elvyani@aprilasia.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -9587,44 +9580,44 @@
       "subject": "TO CONFIRM DOCS _ 5RAE-03718 _ APAPA_NIGERIA _ KTP CO., LTD _ SIJ6187234",
       "from": "mitchelle_ting@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
+      "status": "OK",
+      "review_reason": null,
       "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "APRIL FINE PAPER TRADING ON BEHALF OF VITAL SOLUTIONS PTE LTD 77 ROBINSON ROAD, #21-01 SINGAPORE 068896",
+          "bl_value": "APRIL FINE PAPER TRADING ON BEHALF OF VITAL SOLUTIONS PTE LTD 77 ROBINSON ROAD, #21-01 SINGAPORE 068896",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "KTP CO., LTD KTP BLDG., 36 SANGWON-GIL SEOUNGDONG-GU, SEOUL, SOUTH KOREA TEL:02-2285-6025",
+          "bl_value": "KTP CO., LTD KTP BLDG., 36 SANGWON-GIL SEOUNGDONG-GU, SEOUL, SOUTH KOREA TEL:02-2285-6025",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "KTP CO., LTD KTP BLDG., 36 SANGWON-GIL SEOUNGDONG-GU, SEOUL, SOUTH KOREA TEL:02-2285-6025",
+          "bl_value": "KTP CO., LTD KTP BLDG., 36 SANGWON-GIL SEOUNGDONG-GU, SEOUL, SOUTH KOREA TEL:02-2285-6025",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "PORT KLANG (WESTPORT), MALAYSIA",
+          "bl_value": "PORT KLANG (WESTPORT), MALAYSIA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "APAPA, NIGERIA",
+          "bl_value": "APAPA, NIGERIA",
+          "status": "match"
         },
         {
           "field": "container_count",
@@ -9636,9 +9629,9 @@
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "23,702 KG",
+          "bl_value": "23,702 KG",
+          "status": "match"
         }
       ]
     },
@@ -9646,7 +9639,7 @@
       "id": "email_161",
       "subject": "RE_ AIE - APAPA_NIGERIA - HAPAG(HLCUSIN513271950) - 5RCY-58573 - 5250070652 - ROXCEL TRADING GMBH - OA",
       "from": "docs@vitalsolutions.sg",
-      "category": "BL_COMPARISON",
+      "category": "GENERAL",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -12414,7 +12407,7 @@
       "id": "email_207",
       "subject": "AFRT - HOUSTON_US - EVER(EGLV421776253492) - 5ALT-16873 - 5250079774 - KPP-ANTALIS (SINGAPORE) PTE. LTD. - OA_CFR",
       "from": "faraz_ali@aprilasia.com",
-      "category": "BL_COMPARISON",
+      "category": "GENERAL",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -12475,44 +12468,44 @@
       "subject": "RE_ REQUEST BL DRAFT _ PO 25333_ UNCOATED WOODFREE PAPER IN REA__144MT",
       "from": "hanna_azhari@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
+      "status": "OK",
+      "review_reason": null,
       "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "APRIL FAR EAST (M) SDN BHD TOWER 2, AVENUE 5, LEVEL 6 BANGSAR SOUTH CITY, NO. 8 JALAN KERINCHI 59200 KUALA LUMPUR, MALAYSIA",
+          "bl_value": "APRIL FAR EAST (M) SDN BHD TOWER 2, AVENUE 5, LEVEL 6 BANGSAR SOUTH CITY, NO. 8 JALAN KERINCHI 59200 KUALA LUMPUR, MALAYSIA",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "CERIEX ZONE INDUSTRIELLE CONAKRY, GUINEA",
+          "bl_value": "CERIEX ZONE INDUSTRIELLE CONAKRY, GUINEA",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "CERIEX ZONE INDUSTRIELLE CONAKRY, GUINEA",
+          "bl_value": "CERIEX ZONE INDUSTRIELLE CONAKRY, GUINEA",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "RUGAO/NANTONG/SHANGHAI, CHINA",
+          "bl_value": "RUGAO/NANTONG/SHANGHAI, CHINA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "FREMANTLE, AUSTRALIA",
+          "bl_value": "FREMANTLE, AUSTRALIA",
+          "status": "match"
         },
         {
           "field": "container_count",
@@ -12524,9 +12517,9 @@
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "143,940 KG",
+          "bl_value": "143,940 KG",
+          "status": "match"
         }
       ]
     },
@@ -12594,7 +12587,7 @@
       "id": "email_210",
       "subject": "AFRT - KLAIPEDA_LITHUANIA - MONTER(MCLSIN4523805) - 5APH-28410 - 5250076727 - HABRAS INTERNATIONAL LIMITED - DP",
       "from": "willy_ss@aprilasia.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -13736,7 +13729,7 @@
       "id": "email_229",
       "subject": "RE_ REQUEST BL DRAFT _ PO 25654_ MULTIPURPOSE PAPER - A4 - PAPE__23MT",
       "from": "willy_ss@aprilasia.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -14999,7 +14992,7 @@
       "id": "email_250",
       "subject": "REQUEST BL DRAFT _ PO 26191_ FUJITO PAPERONE INKJET PAPER__72MT",
       "from": "willy_ss@aprilasia.com",
-      "category": "BL_COMPARISON",
+      "category": "SI_REQUEST",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -15662,7 +15655,7 @@
       "id": "email_261",
       "subject": "AFEMY - NEW YORK_US - YM(YMJAI045319433) - 5SUS-61498 - 5250077283 - CERIEX - DP",
       "from": "sathiya@april.com.my",
-      "category": "BL_COMPARISON",
+      "category": "GENERAL",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -15962,7 +15955,7 @@
       "id": "email_266",
       "subject": "07_01_2026 - UPDATE SUMMARY VISION 202 V.002",
       "from": "documentation@aprilasia.com",
-      "category": "SI_REQUEST",
+      "category": "GENERAL",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -16385,44 +16378,44 @@
       "subject": "TO CONFIRM DOCS _ 5RUS-33738 _ CONAKRY_GUINEA _ KPP-ANTALIS (SINGAPORE) PTE. LTD. _ OOLU9284044566",
       "from": "deswita_elvyani@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
+      "status": "OK",
+      "review_reason": null,
       "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "ASIA PACIFIC PAPERBOARD TRADING PTE LTD 80 RAFFLES PLACE, #50-01 UOB PLAZA 1 SINGAPORE 048624",
+          "bl_value": "ASIA PACIFIC PAPERBOARD TRADING PTE LTD 80 RAFFLES PLACE, #50-01 UOB PLAZA 1 SINGAPORE 048624",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "KPP-ANTALIS (SINGAPORE) PTE. LTD. 8 TEMASEK BOULEVARD #42-01 SUNTEC TOWER 3 SINGAPORE 038988",
+          "bl_value": "KPP-ANTALIS (SINGAPORE) PTE. LTD. 8 TEMASEK BOULEVARD #42-01 SUNTEC TOWER 3 SINGAPORE 038988",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "INTERNATIONAL FOREST PRODUCTS LLC 6 HOLLIS STREET SUITE 100 FRAMINGHAM, MA 01702, USA",
+          "bl_value": "INTERNATIONAL FOREST PRODUCTS LLC 6 HOLLIS STREET SUITE 100 FRAMINGHAM, MA 01702, USA",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "RUGAO/NANTONG/SHANGHAI, CHINA",
+          "bl_value": "RUGAO/NANTONG/SHANGHAI, CHINA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "CONAKRY, GUINEA",
+          "bl_value": "CONAKRY, GUINEA",
+          "status": "match"
         },
         {
           "field": "container_count",
@@ -16434,9 +16427,9 @@
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "41,604 KG",
+          "bl_value": "41,604 KG",
+          "status": "match"
         }
       ]
     },
@@ -17465,58 +17458,61 @@
       "subject": "RE_ TO CONFIRM DOCS _ 5RMY-12871 _ SAVANNAH_US _ INTERNATIONAL FOREST PRODUCTS LLC _ OOLU7833321160",
       "from": "willy_ss@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
-      "mismatches": [],
+      "status": "MISMATCH",
+      "review_reason": null,
+      "mismatches": [
+        "consignee",
+        "container_count"
+      ],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
           "si_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE | #813, 4 EA, DUBAI AIRPORT FREE ZONE; P.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE#813, 4 EA, DUBAI AIRPORT FREE ZONEP.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
           "si_value": "INTERNATIONAL FOREST PRODUCTS LLC | 6 HOLLIS STREET; SUITE 100; FRAMINGHAM, MA 01702, USA",
-          "bl_value": null,
+          "bl_value": "TOPKOPY MIDDLE EAST FZE6 HOLLIS STREETSUITE 100FRAMINGHAM, MA 01702, USA",
           "status": "mismatch"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
           "si_value": "INTERNATIONAL FOREST PRODUCTS LLC | 6 HOLLIS STREET; SUITE 100; FRAMINGHAM, MA 01702, USA",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "INTERNATIONAL FOREST PRODUCTS LLC6 HOLLIS STREETSUITE 100FRAMINGHAM, MA 01702, USA",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
           "si_value": "NANTONG, CHINA",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "NANTONG, CHINA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
           "si_value": "SAVANNAH, US",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "SAVANNAH, US",
+          "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
           "si_value": "1 x 20'GP",
-          "bl_value": null,
+          "bl_value": "3 x 20'GP",
           "status": "mismatch"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
           "si_value": "21745",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "21,745",
+          "status": "match"
         }
       ]
     },
@@ -18128,58 +18124,60 @@
       "subject": "RE_ Draft BL SOLID 16 V.044NW2 RUGAO/NANTONG/SHANGHAI - amend BL 052",
       "from": "nirmala@fujitogrp.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
-      "mismatches": [],
+      "status": "MISMATCH",
+      "review_reason": null,
+      "mismatches": [
+        "container_count"
+      ],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
           "si_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE | #813, 4 EA, DUBAI AIRPORT FREE ZONE; P.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE#813, 4 EA, DUBAI AIRPORT FREE ZONEP.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
           "si_value": "INTERNATIONAL FOREST PRODUCTS LLC | 6 HOLLIS STREET; SUITE 100; FRAMINGHAM, MA 01702, USA",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "INTERNATIONAL FOREST PRODUCTS LLC6 HOLLIS STREETSUITE 100FRAMINGHAM, MA 01702, USA",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
           "si_value": "KTP CO., LTD | KTP BLDG., 36 SANGWON-GIL; SEOUNGDONG-GU, SEOUL, SOUTH KOREA; TEL:02-2285-6025",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "KTP CO., LTDKTP BLDG., 36 SANGWON-GILSEOUNGDONG-GU, SEOUL, SOUTH KOREATEL:02-2285-6025",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
           "si_value": "RUGAO/NANTONG/SHANGHAI, CHINA",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "RUGAO/NANTONG/SHANGHAI, CHINA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
           "si_value": "BRISBANE, AUSTRALIA",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "BRISBANE, AUSTRALIA",
+          "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
           "si_value": "2 x 20'GP",
-          "bl_value": null,
+          "bl_value": "4 x 20'GP",
           "status": "mismatch"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
           "si_value": "40176",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "40,176",
+          "status": "match"
         }
       ]
     },
@@ -18791,44 +18789,47 @@
       "subject": "RE_ AFEMY - HOCHIMINH CITY_VIETNAM - MSC(MEDUUD649837) - 5RMY-62736 - 5250075271 - KPP-ANTALIS (SINGAPORE) PTE. LTD. - OA_CFR",
       "from": "nirmala@fujitogrp.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
-      "mismatches": [],
+      "status": "MISMATCH",
+      "review_reason": null,
+      "mismatches": [
+        "container_count",
+        "gross_weight_kg"
+      ],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "APRIL FINE PAPER TRADING ON BEHALF OF VITAL SOLUTIONS PTE LTD 77 ROBINSON ROAD, #21-01 SINGAPORE 068896",
+          "bl_value": "APRIL FINE PAPER TRADING ON BEHALF OF VITAL SOLUTIONS PTE LTD 77 ROBINSON ROAD, #21-01 SINGAPORE 068896",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "KPP-ANTALIS (SINGAPORE) PTE. LTD. 8 TEMASEK BOULEVARD #42-01 SUNTEC TOWER 3 SINGAPORE 038988",
+          "bl_value": "KPP-ANTALIS (SINGAPORE) PTE. LTD. 8 TEMASEK BOULEVARD #42-01 SUNTEC TOWER 3 SINGAPORE 038988",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "KPP-ANTALIS (SINGAPORE) PTE. LTD. 8 TEMASEK BOULEVARD #42-01 SUNTEC TOWER 3 SINGAPORE 038988",
+          "bl_value": "KPP-ANTALIS (SINGAPORE) PTE. LTD. 8 TEMASEK BOULEVARD #42-01 SUNTEC TOWER 3 SINGAPORE 038988",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "RUGAO/NANTONG/SHANGHAI, CHINA",
+          "bl_value": "RUGAO/NANTONG/SHANGHAI, CHINA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "HOCHIMINH CITY, VIETNAM",
+          "bl_value": "HOCHIMINH CITY, VIETNAM",
+          "status": "match"
         },
         {
           "field": "container_count",
@@ -18840,8 +18841,8 @@
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": null,
-          "bl_value": null,
+          "si_value": "118,270 KG",
+          "bl_value": "117,770 KG",
           "status": "mismatch"
         }
       ]
@@ -21080,44 +21081,47 @@
       "subject": "RE_ TO CONFIRM DOCS _ 5RCY-19754 _ ASHDOD_ISRAEL _ KTP CO., LTD _ SIN979162022",
       "from": "deswita_elvyani@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
-      "mismatches": [],
+      "status": "MISMATCH",
+      "review_reason": null,
+      "mismatches": [
+        "container_count",
+        "gross_weight_kg"
+      ],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE #813, 4 EA, DUBAI AIRPORT FREE ZONE P.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
+          "bl_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE #813, 4 EA, DUBAI AIRPORT FREE ZONE P.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "KTP CO., LTD KTP BLDG., 36 SANGWON-GIL SEOUNGDONG-GU, SEOUL, SOUTH KOREA TEL:02-2285-6025",
+          "bl_value": "KTP CO., LTD KTP BLDG., 36 SANGWON-GIL SEOUNGDONG-GU, SEOUL, SOUTH KOREA TEL:02-2285-6025",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "KTP CO., LTD KTP BLDG., 36 SANGWON-GIL SEOUNGDONG-GU, SEOUL, SOUTH KOREA TEL:02-2285-6025",
+          "bl_value": "KTP CO., LTD KTP BLDG., 36 SANGWON-GIL SEOUNGDONG-GU, SEOUL, SOUTH KOREA TEL:02-2285-6025",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "PORT KLANG (WESTPORT), MALAYSIA",
+          "bl_value": "PORT KLANG (WESTPORT), MALAYSIA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "ASHDOD, ISRAEL",
+          "bl_value": "ASHDOD, ISRAEL",
+          "status": "match"
         },
         {
           "field": "container_count",
@@ -21129,8 +21133,8 @@
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": null,
-          "bl_value": null,
+          "si_value": "359,415 KG",
+          "bl_value": "360,415 KG",
           "status": "mismatch"
         }
       ]
@@ -21260,57 +21264,60 @@
       "subject": "TO CONFIRM DOCS _ 5RSG-78360 _ VALPARAISO_CHILE _ HABRAS INTERNATIONAL LIMITED _ OOLU4901495427",
       "from": "hanna_azhari@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
-      "mismatches": [],
+      "status": "MISMATCH",
+      "review_reason": null,
+      "mismatches": [
+        "gross_weight_kg",
+        "notify_party"
+      ],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
           "si_value": "APRIL FINE PAPER TRADING | ON BEHALF OF VITAL SOLUTIONS PTE LTD; 77 ROBINSON ROAD, #21-01; SINGAPORE 068896",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "APRIL FINE PAPER TRADINGON BEHALF OF VITAL SOLUTIONS PTE LTD77 ROBINSON ROAD, #21-01SINGAPORE 068896",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
           "si_value": "HABRAS INTERNATIONAL LIMITED | OFFICE 1204, THE BURLINGTON TOWER; BUSINESS BAY, DUBAI, UAE",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "HABRAS INTERNATIONAL LIMITEDOFFICE 1204, THE BURLINGTON TOWERBUSINESS BAY, DUBAI, UAE",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
           "si_value": "HABRAS INTERNATIONAL LIMITED | OFFICE 1204, THE BURLINGTON TOWER; BUSINESS BAY, DUBAI, UAE",
-          "bl_value": null,
+          "bl_value": "NAGAPPA EXPORTSOFFICE 1204, THE BURLINGTON TOWERBUSINESS BAY, DUBAI, UAE",
           "status": "mismatch"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
           "si_value": "RUGAO/NANTONG/SHANGHAI, CHINA",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "RUGAO/NANTONG/SHANGHAI, CHINA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
           "si_value": "VALPARAISO, CHILE",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "VALPARAISO, CHILE",
+          "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
           "si_value": "1 x 20'GP",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "1 x 20'GP",
+          "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
           "si_value": "20603",
-          "bl_value": null,
+          "bl_value": "22,603",
           "status": "mismatch"
         }
       ]
@@ -24445,44 +24452,44 @@
       "subject": "RE_ TO CONFIRM DOCS _ 5RUS-74951 _ YANGON_MYANMAR _ NAGAPPA EXPORTS _ EGLV166670808509",
       "from": "logistics@algurg.ae",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
+      "status": "OK",
+      "review_reason": null,
       "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "APRIL FINE PAPER TRADING ON BEHALF OF VITAL SOLUTIONS PTE LTD 77 ROBINSON ROAD, #21-01 SINGAPORE 068896",
+          "bl_value": "APRIL FINE PAPER TRADING ON BEHALF OF VITAL SOLUTIONS PTE LTD 77 ROBINSON ROAD, #21-01 SINGAPORE 068896",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "NAGAPPA EXPORTS NEW NO : 23, L-BLOCK, 17TH STREET ANNA NAGAR EAST CHENNAI, TAMIL NADU 600102 GST NO - 33AACFN6792L1ZU",
+          "bl_value": "NAGAPPA EXPORTS NEW NO : 23, L-BLOCK, 17TH STREET ANNA NAGAR EAST CHENNAI, TAMIL NADU 600102 GST NO - 33AACFN6792L1ZU",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "NAGAPPA EXPORTS NEW NO : 23, L-BLOCK, 17TH STREET ANNA NAGAR EAST CHENNAI, TAMIL NADU 600102 GST NO - 33AACFN6792L1ZU",
+          "bl_value": "NAGAPPA EXPORTS NEW NO : 23, L-BLOCK, 17TH STREET ANNA NAGAR EAST CHENNAI, TAMIL NADU 600102 GST NO - 33AACFN6792L1ZU",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "NHAVA SHEVA, INDIA",
+          "bl_value": "NHAVA SHEVA, INDIA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "YANGON, MYANMAR",
+          "bl_value": "YANGON, MYANMAR",
+          "status": "match"
         },
         {
           "field": "container_count",
@@ -24494,9 +24501,9 @@
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "285,720 KG",
+          "bl_value": "285,720 KG",
+          "status": "match"
         }
       ]
     },
@@ -24624,60 +24631,58 @@
       "id": "email_410",
       "subject": "REQUEST BL DRAFT _ PO 26446_ PAPERONE DIGITAL COPIER PAPER__315MT",
       "from": "willy_ss@aprilasia.com",
-      "category": "BL_COMPARISON",
-      "status": "MISMATCH",
+      "category": "SI_REQUEST",
+      "status": "OK",
       "review_reason": null,
-      "mismatches": [
-        "port_of_loading"
-      ],
+      "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE",
-          "bl_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": "PACIFIC OFFICE (M) SDN BHD",
-          "bl_value": "PACIFIC OFFICE (M) SDN BHD",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": "PACIFIC OFFICE (M) SDN BHD",
-          "bl_value": "PACIFIC OFFICE (M) SDN BHD",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": "SINGAPORE (SGSIN)",
-          "bl_value": "PORT KLANG (WESTPORT), MALAYSIA (SGSIN)",
-          "status": "mismatch"
+          "si_value": null,
+          "bl_value": null,
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": "ASHDOD, ISRAEL (ILASH)",
-          "bl_value": "ASHDOD, ISRAEL (ILASH)",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
-          "si_value": "15 x 40'HC",
-          "bl_value": "15 x 40'HC",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": "324,210 KG",
-          "bl_value": "324,210 KG",
+          "si_value": null,
+          "bl_value": null,
           "status": "match"
         }
       ]
@@ -24687,44 +24692,44 @@
       "subject": "AFRT - NEW YORK_US - EVER(EGLV686775240148) - 5AAT-06227 - 5250072362 - VITAL SOLUTIONS PTE. LTD. - OA",
       "from": "exports@ifpla.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
+      "status": "OK",
+      "review_reason": null,
       "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "APRIL FAR EAST (M) SDN BHD TOWER 2, AVENUE 5, LEVEL 6 BANGSAR SOUTH CITY, NO. 8 JALAN KERINCHI 59200 KUALA LUMPUR, MALAYSIA",
+          "bl_value": "APRIL FAR EAST (M) SDN BHD TOWER 2, AVENUE 5, LEVEL 6 BANGSAR SOUTH CITY, NO. 8 JALAN KERINCHI 59200 KUALA LUMPUR, MALAYSIA",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "VITAL SOLUTIONS PTE. LTD. 77 ROBINSON ROAD #21-01 ROBINSON 77 SINGAPORE 068896",
+          "bl_value": "VITAL SOLUTIONS PTE. LTD. 77 ROBINSON ROAD #21-01 ROBINSON 77 SINGAPORE 068896",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "VITAL SOLUTIONS PTE. LTD. 77 ROBINSON ROAD #21-01 ROBINSON 77 SINGAPORE 068896",
+          "bl_value": "VITAL SOLUTIONS PTE. LTD. 77 ROBINSON ROAD #21-01 ROBINSON 77 SINGAPORE 068896",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "PORT KLANG (WESTPORT), MALAYSIA",
+          "bl_value": "PORT KLANG (WESTPORT), MALAYSIA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "NEW YORK, US",
+          "bl_value": "NEW YORK, US",
+          "status": "match"
         },
         {
           "field": "container_count",
@@ -24736,9 +24741,9 @@
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "113,970 KG",
+          "bl_value": "113,970 KG",
+          "status": "match"
         }
       ]
     },
@@ -25891,7 +25896,7 @@
       "id": "email_431",
       "subject": "_Reminder_Paper - Submit SI & AED_15-01-2026",
       "from": "documentation@aprilasia.com",
-      "category": "SI_REQUEST",
+      "category": "GENERAL",
       "status": "OK",
       "review_reason": null,
       "mismatches": [],
@@ -26072,43 +26077,45 @@
       "subject": "RE_ TO CONFIRM DOCS _ 5ALT-34476 _ BUSAN_SOUTH KOREA _ TOPKOPY MIDDLE EAST FZE _ YMJAI970996254",
       "from": "mitchelle_ting@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
-      "mismatches": [],
+      "status": "MISMATCH",
+      "review_reason": null,
+      "mismatches": [
+        "port_of_discharge"
+      ],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE #813, 4 EA, DUBAI AIRPORT FREE ZONE P.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
+          "bl_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE #813, 4 EA, DUBAI AIRPORT FREE ZONE P.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "TOPKOPY MIDDLE EAST FZE P.O. BOX 17436 JEBEL ALI FREE ZONE, DUBAI, UAE",
+          "bl_value": "TOPKOPY MIDDLE EAST FZE P.O. BOX 17436 JEBEL ALI FREE ZONE, DUBAI, UAE",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "TOPKOPY MIDDLE EAST FZE P.O. BOX 17436 JEBEL ALI FREE ZONE, DUBAI, UAE",
+          "bl_value": "TOPKOPY MIDDLE EAST FZE P.O. BOX 17436 JEBEL ALI FREE ZONE, DUBAI, UAE",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "NHAVA SHEVA, INDIA",
+          "bl_value": "NHAVA SHEVA, INDIA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": null,
-          "bl_value": null,
+          "si_value": "BUSAN, SOUTH KOREA",
+          "bl_value": "CEBU, PHILIPPINES",
           "status": "mismatch"
         },
         {
@@ -26121,9 +26128,9 @@
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "261,480 KG",
+          "bl_value": "261,480 KG",
+          "status": "match"
         }
       ]
     },
@@ -26132,57 +26139,59 @@
       "subject": "RE_ AFPTME - AQABA_JORDAN - EVER(EGLV353574859532) - 5RMY-33797 - 5250070581 - AL GURG STATIONERY LLC - DP",
       "from": "sathiya@april.com.my",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
-      "mismatches": [],
+      "status": "MISMATCH",
+      "review_reason": null,
+      "mismatches": [
+        "gross_weight_kg"
+      ],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
           "si_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE | #813, 4 EA, DUBAI AIRPORT FREE ZONE; P.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE#813, 4 EA, DUBAI AIRPORT FREE ZONEP.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
           "si_value": "AL GURG STATIONERY LLC | P.O. BOX 5069; DUBAI, UNITED ARAB EMIRATES",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "AL GURG STATIONERY LLCP.O. BOX 5069DUBAI, UNITED ARAB EMIRATES",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
           "si_value": "AL GURG STATIONERY LLC | P.O. BOX 5069; DUBAI, UNITED ARAB EMIRATES",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "AL GURG STATIONERY LLCP.O. BOX 5069DUBAI, UNITED ARAB EMIRATES",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
           "si_value": "SINGAPORE",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "SINGAPORE",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
           "si_value": "AQABA, JORDAN",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "AQABA, JORDAN",
+          "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
           "si_value": "10 x 20'FCL",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "10 x 20'FCL",
+          "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
           "si_value": "214270",
-          "bl_value": null,
+          "bl_value": "214,770",
           "status": "mismatch"
         }
       ]
@@ -27752,58 +27761,58 @@
       "subject": "RE_ TO CONFIRM DOCS _ 5RCY-72696 _ CONAKRY_GUINEA _ 3S PAPER PRODUCTS SDN BHD _ OOLU3410346996",
       "from": "arlene_yamomo@aprilasia.com",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
+      "status": "OK",
+      "review_reason": null,
       "mismatches": [],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
           "si_value": "ASIA PACIFIC PAPERBOARD TRADING PTE LTD | 80 RAFFLES PLACE, #50-01 UOB PLAZA 1; SINGAPORE 048624",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "ASIA PACIFIC PAPERBOARD TRADING PTE LTD80 RAFFLES PLACE, #50-01 UOB PLAZA 1SINGAPORE 048624",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
           "si_value": "3S PAPER PRODUCTS SDN BHD | NO 12, JALAN INDUSTRI 3/6; RAWANG INTEGRATED INDUSTRIAL PARK; 48000 RAWANG, SELANGOR, MALAYSIA",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "3S PAPER PRODUCTS SDN BHDNO 12, JALAN INDUSTRI 3/6RAWANG INTEGRATED INDUSTRIAL PARK48000 RAWANG, SELANGOR, MALAYSIA",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
           "si_value": "ORIENT LINKS CO (LLC) | P.O. BOX 61041; JEBEL ALI, DUBAI, UAE",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "ORIENT LINKS CO (LLC)P.O. BOX 61041JEBEL ALI, DUBAI, UAE",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
           "si_value": "BUATAN, INDONESIA",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "BUATAN, INDONESIA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
           "si_value": "CONAKRY, GUINEA",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "CONAKRY, GUINEA",
+          "status": "match"
         },
         {
           "field": "container_count",
           "label": "Container Count",
           "si_value": "5 x 20'GP",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "5 x 20'GP",
+          "status": "match"
         },
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
           "si_value": "116055",
-          "bl_value": null,
-          "status": "mismatch"
+          "bl_value": "116,055",
+          "status": "match"
         }
       ]
     },
@@ -29977,44 +29986,46 @@
       "subject": "RE_ AIE - HOCHIMINH CITY_VIETNAM - MSC(MEDUUD646871) - 5RUS-81876 - 5250079208 - TOPKOPY MIDDLE EAST FZE - OA",
       "from": "guancheng_lee@april.com.my",
       "category": "BL_COMPARISON",
-      "status": "NEEDS_REVIEW",
-      "review_reason": "missing_value",
-      "mismatches": [],
+      "status": "MISMATCH",
+      "review_reason": null,
+      "mismatches": [
+        "gross_weight_kg"
+      ],
       "field_comparison": [
         {
           "field": "shipper",
           "label": "Shipper",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE #813, 4 EA, DUBAI AIRPORT FREE ZONE P.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
+          "bl_value": "APRIL FINE PAPER TRADING (MIDDLE EAST) FZE #813, 4 EA, DUBAI AIRPORT FREE ZONE P.O. BOX: 293775, DUBAI, UNITED ARAB EMIRATES",
+          "status": "match"
         },
         {
           "field": "consignee",
           "label": "Consignee",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "TOPKOPY MIDDLE EAST FZE P.O. BOX 17436 JEBEL ALI FREE ZONE, DUBAI, UAE",
+          "bl_value": "TOPKOPY MIDDLE EAST FZE P.O. BOX 17436 JEBEL ALI FREE ZONE, DUBAI, UAE",
+          "status": "match"
         },
         {
           "field": "notify_party",
           "label": "Notify Party",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "TOPKOPY MIDDLE EAST FZE P.O. BOX 17436 JEBEL ALI FREE ZONE, DUBAI, UAE",
+          "bl_value": "TOPKOPY MIDDLE EAST FZE P.O. BOX 17436 JEBEL ALI FREE ZONE, DUBAI, UAE",
+          "status": "match"
         },
         {
           "field": "port_of_loading",
           "label": "Port of Loading",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "PORT KLANG (WESTPORT), MALAYSIA",
+          "bl_value": "PORT KLANG (WESTPORT), MALAYSIA",
+          "status": "match"
         },
         {
           "field": "port_of_discharge",
           "label": "Port of Discharge",
-          "si_value": null,
-          "bl_value": null,
-          "status": "mismatch"
+          "si_value": "HOCHIMINH CITY, VIETNAM",
+          "bl_value": "HOCHIMINH CITY, VIETNAM",
+          "status": "match"
         },
         {
           "field": "container_count",
@@ -30026,8 +30037,8 @@
         {
           "field": "gross_weight_kg",
           "label": "Gross Weight",
-          "si_value": null,
-          "bl_value": null,
+          "si_value": "40,326 KG",
+          "bl_value": "41,326 KG",
           "status": "mismatch"
         }
       ]
@@ -31294,132 +31305,6 @@
     }
   ],
   "review_queue": [
-    {
-      "email_id": "email_055",
-      "subject": "AIE - KARACHI_PAKISTAN - PIL(SIN616928451) - 5AKR-57059 - 5250076401 - AL GURG STATIONERY LLC - OA",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_059",
-      "subject": "REQUEST BL DRAFT _ PO 26000_ UNCOATED WOODFREE PAPER IN REA__126MT",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_097",
-      "subject": "Draft BL MARCOPOLO 810 V.BS005 SINGAPORE - amend BL 055",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_107",
-      "subject": "TO CONFIRM DOCS _ 5RFR-36884 _ MOMBASA_KENYA _ KTP CO., LTD _ OOLU1815997062",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_160",
-      "subject": "TO CONFIRM DOCS _ 5RAE-03718 _ APAPA_NIGERIA _ KTP CO., LTD _ SIJ6187234",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_208",
-      "subject": "RE_ REQUEST BL DRAFT _ PO 25333_ UNCOATED WOODFREE PAPER IN REA__144MT",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_273",
-      "subject": "TO CONFIRM DOCS _ 5RUS-33738 _ CONAKRY_GUINEA _ KPP-ANTALIS (SINGAPORE) PTE. LTD. _ OOLU9284044566",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_291",
-      "subject": "RE_ TO CONFIRM DOCS _ 5RMY-12871 _ SAVANNAH_US _ INTERNATIONAL FOREST PRODUCTS LLC _ OOLU7833321160",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_302",
-      "subject": "RE_ Draft BL SOLID 16 V.044NW2 RUGAO/NANTONG/SHANGHAI - amend BL 052",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_313",
-      "subject": "RE_ AFEMY - HOCHIMINH CITY_VIETNAM - MSC(MEDUUD649837) - 5RMY-62736 - 5250075271 - KPP-ANTALIS (SINGAPORE) PTE. LTD. - OA_CFR",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_351",
-      "subject": "RE_ TO CONFIRM DOCS _ 5RCY-19754 _ ASHDOD_ISRAEL _ KTP CO., LTD _ SIN979162022",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_354",
-      "subject": "TO CONFIRM DOCS _ 5RSG-78360 _ VALPARAISO_CHILE _ HABRAS INTERNATIONAL LIMITED _ OOLU4901495427",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_407",
-      "subject": "RE_ TO CONFIRM DOCS _ 5RUS-74951 _ YANGON_MYANMAR _ NAGAPPA EXPORTS _ EGLV166670808509",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_411",
-      "subject": "AFRT - NEW YORK_US - EVER(EGLV686775240148) - 5AAT-06227 - 5250072362 - VITAL SOLUTIONS PTE. LTD. - OA",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_434",
-      "subject": "RE_ TO CONFIRM DOCS _ 5ALT-34476 _ BUSAN_SOUTH KOREA _ TOPKOPY MIDDLE EAST FZE _ YMJAI970996254",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_435",
-      "subject": "RE_ AFPTME - AQABA_JORDAN - EVER(EGLV353574859532) - 5RMY-33797 - 5250070581 - AL GURG STATIONERY LLC - DP",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_462",
-      "subject": "RE_ TO CONFIRM DOCS _ 5RCY-72696 _ CONAKRY_GUINEA _ 3S PAPER PRODUCTS SDN BHD _ OOLU3410346996",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
-    {
-      "email_id": "email_499",
-      "subject": "RE_ AIE - HOCHIMINH CITY_VIETNAM - MSC(MEDUUD646871) - 5RUS-81876 - 5250079208 - TOPKOPY MIDDLE EAST FZE - OA",
-      "reason": "missing_value",
-      "resolved": false,
-      "resolution": null
-    },
     {
       "email_id": "email_501",
       "subject": "RE_ TO CONFIRM DOCS _ 5RSG-51584 _ HOUSTON_US _ KPP-ANTALIS (SINGAPORE) PTE. LTD. _ YMJAI905670867",
