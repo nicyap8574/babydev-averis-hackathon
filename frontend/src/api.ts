@@ -209,6 +209,28 @@ export async function fetchReviewQueue(): Promise<ReviewQueueItem[]> {
   }));
 }
 
+function tally(values: string[]): Record<string, number> {
+  return values.reduce<Record<string, number>>((acc, value) => {
+    acc[value] = (acc[value] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+export async function fetchDefectFieldCounts(): Promise<Record<string, number>> {
+  if (!supabase) {
+    const { emails } = await loadLocalCaseData();
+    return tally(emails.flatMap((email) => email.mismatches));
+  }
+
+  const { data, error } = await supabase
+    .from("inbox_records")
+    .select("defect_fields")
+    .eq("status", "MISMATCH");
+  if (error) throw new Error(error.message);
+
+  return tally((data ?? []).flatMap((row) => (row.defect_fields as string[] | null) ?? []));
+}
+
 export async function resolveReviewItem(
   emailId: string,
   resolution: string,

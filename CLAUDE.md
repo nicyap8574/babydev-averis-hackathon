@@ -24,7 +24,7 @@ several parts that don't share code (no shared package/imports between them):
 - `supabase/functions/identify-document-request/` — a Supabase Edge Function (Deno/TS) backing
   the classifier lab tab: deterministic rules first, OpenRouter (`google/gemini-2.0-flash-001`)
   second for ambiguous cases, persisted to Postgres. Separate from, and not reordered to match,
-  `pipeline.py`'s own NVIDIA→OpenRouter→keywords cascade (see below) — the two exist for
+  `pipeline.py`'s own Groq→NVIDIA→Cerebras→OpenRouter→keywords cascade (see below) — the two exist for
   different use cases (interactive single-email testing vs. batch scoring), and
   `frontend/src/components/ClassifierLabView.tsx` calls this Edge Function directly.
 - Repo root `tests/`/`scripts/` — the classifier logic's own tests
@@ -50,18 +50,42 @@ exact match for container count, unit-converted with rounding-only tolerance for
 
 - **Frontend:** React (`frontend/`, port 5173) — one app, talking to Supabase directly. See
   "What this repo is" above.
-- **AI model:** `pipeline.py`'s classification cascade is **NVIDIA direct → OpenRouter → keyword
-  rules**: NVIDIA's own endpoint is tried first (`NVIDIA_API_KEY`, model
-  `nvidia/nemotron-3-ultra-550b-a55b`), then OpenRouter (`OPENROUTER_API_KEY`, model
-  `google/gemini-2.0-flash-001`) as a second opinion only if NVIDIA hard-fails, and only if
-  *both* fail does it fall back to `classify_keywords`. This is a deliberate deviation from the
-  original target of a single `nvidia/nemotron-3-ultra-550b-a55b:free` OpenRouter call — see
-  `pipeline.py`'s `LLMClassifier` for the actual implementation. OpenRouter's free tier (20
-  req/min, 50 req/day) is rate-limited hard enough that a prior full-dataset run without an
-  NVIDIA key exhausted it almost immediately; `OPENROUTER_MAX_CALLS_PER_RUN` (default 40) and an
-  immediate short-circuit on the first HTTP 429 exist specifically to prevent repeating that.
-  No vision model is used anywhere — text-only; scanned/image-only attachments would need an OCR
-  pass (not yet implemented) before reaching any model.
+- **AI model:** `pipeline.py`'s classification cascade is **Groq (GPT-OSS 120B, then Llama 3.3
+  70B, then Qwen3.8-27B) → NVIDIA direct → Cerebras (Qwen3-32B) → OpenRouter → keyword rules**.
+  This order is evidence-based, from a live head-to-head test of all providers against this
+  dataset's hardest/most-ambiguous emails: both Groq models tested had zero failures and the
+  best accuracy (94%), so Groq leads; NVIDIA was accurate when it answered but failed ~31% of
+  the time (mostly rate limits), so it sits after Groq rather than first. Groq is called
+  **directly against its own API** (`api.groq.com`, not proxied through OpenRouter —
+  `GROQ_API_KEY`); NVIDIA's own endpoint (`NVIDIA_API_KEY`, model
+  `nvidia/nemotron-3-ultra-550b-a55b`) is tried after all three Groq models fail; Cerebras is
+  called **directly against its own API** (`api.cerebras.ai`, OpenAI-compatible, not proxied
+  through OpenRouter — `CEREBRAS_API_KEY`, model `qwen-3-32b`, chosen for its free-tier rate
+  bracket and for model-family diversity from the rest of the cascade); only if NVIDIA, Groq,
+  and Cerebras all fail does it try OpenRouter (`OPENROUTER_API_KEY`, model
+  `google/gemini-2.0-flash-001`) as a last LLM opinion; only if *all six* fail does it fall back
+  to `classify_keywords`. Groq's own free tier gives each model a separate rate-limit bucket (30
+  RPM / 1,000 RPD / 8,000 TPM) independent of OpenRouter's — see `pipeline.py`'s `LLMClassifier`
+  for the actual implementation. Two Gemini models (Google AI Studio direct,
+  `GOOGLE_AI_STUDIO_API_KEY`) were tried in this slot previously and were removed after the same
+  head-to-head test: `gemini-3.6-flash` rate-limited almost immediately even at conservative
+  pacing (most calls never landed), and `gemini-3.5-flash-lite` had the *worst* accuracy of any
+  provider tested (69%) while never hard-failing — the worst combination for a fallback chain,
+  since a model that always "succeeds" but is often wrong silently wins the cascade instead of
+  letting a more reliable tier take over. Several things learned from live testing (against real
+  API keys, not just docs) that the code works around: Groq's Cloudflare front end 403s (`error
+  code: 1010`) requests with no/default `User-Agent`, which is what Python's `urllib` sends
+  unless overridden; `openai/gpt-oss-120b` sometimes wraps its answer as `{"label": "..."}`
+  instead of the bare JSON string the prompt asks for (the Cerebras parser accepts both shapes
+  too, defensively, in case its models do the same). OpenRouter's free tier (20 req/min, 50
+  req/day) is rate-limited hard enough that a prior full-dataset run without an NVIDIA key
+  exhausted it almost immediately; `OPENROUTER_MAX_CALLS_PER_RUN` (default 40) and an immediate
+  short-circuit on the first HTTP 429 exist specifically to prevent repeating that (Groq and
+  Cerebras have their own analogous `GROQ_MAX_CALLS_PER_RUN` (default 200) and
+  `CEREBRAS_MAX_CALLS_PER_RUN` (default 200); Cerebras's pacing is a conservative default, not a
+  confirmed limit — verify current free-tier RPM/RPD on cloud.cerebras.ai before relying on it
+  for a large run). No vision model is used anywhere — text-only; scanned/image-only attachments
+  would need an OCR pass (not yet implemented) before reaching any model.
 - **Database:** **Supabase (Postgres)** is the live backend for `frontend/`. `pipeline.py` keeps
   writing `submission.json` unconditionally (that's the scored contract and must never depend on
   a network service); `supabase_sync.py` then best-effort-upserts the same results — including
@@ -99,8 +123,10 @@ Run everything from `sdoc-hackathon-bundle/` unless noted.
 # (plus a Supabase sync + frontend/public/case-data.json snapshot, both best-effort)
 python pipeline.py
 # or: python pipeline.py <data-dir> <output.json>
-# Env vars: NVIDIA_API_KEY, OPENROUTER_API_KEY (both optional — falls back to
-# classify_keywords if unset/failing), OPENROUTER_MAX_CALLS_PER_RUN (default 40),
+# Env vars: GROQ_API_KEY, NVIDIA_API_KEY, CEREBRAS_API_KEY, OPENROUTER_API_KEY
+# (all optional — falls back to classify_keywords if unset/failing),
+# GROQ_MAX_CALLS_PER_RUN (default 200), CEREBRAS_MAX_CALLS_PER_RUN (default 200),
+# OPENROUTER_MAX_CALLS_PER_RUN (default 40),
 # SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (optional — Supabase sync is skipped
 # without them, case-data.json is still written either way)
 
@@ -169,14 +195,30 @@ the main score directly.
    deterministic fallback path (spam words → SI-request subject patterns → comparison
    subject/coded patterns or `_si`+`_bl` attachment pairing → invoice terms → default
    `GENERAL`). Order of the keyword checks matters — e.g. SI-request patterns are checked
-   before invoice terms because SI emails often list invoice numbers too. `LLMClassifier.classify`
-   is a three-stage cascade: NVIDIA direct (`_request_label_nvidia`, `NVIDIA_API_KEY`) is tried
-   first; only if that hard-fails does it try OpenRouter (`_request_label_openrouter`,
-   `OPENROUTER_API_KEY`) as a second opinion, capped at `OPENROUTER_MAX_CALLS_PER_RUN` calls per
-   run and short-circuited immediately on the first HTTP 429; only if *both* fail does it call
-   `classify_keywords`. Results are cached on disk (`llm_cache.json`, keyed by `email_id`,
-   recording which provider produced each label) and every fallback reason from both providers
-   is logged to `llm_fallbacks.log` (`nvidia:<reason>;openrouter:<reason>`).
+   before invoice terms because SI emails often list invoice numbers too. SI-request detection
+   also scans the message body (`SI_REQUEST_BODY_RE`) for an explicit "please/kindly submit ...
+   SI" phrase, since some templated reminder emails carry the real signal only in the body while
+   reusing an unrelated subject line (a billing notice, a vessel update, an HR time-off request);
+   the other categories remain subject-only since no equivalent body-only gap has been found for
+   them. `LLMClassifier.classify`
+   is a six-stage cascade: Groq (`_request_label_groq`, `GROQ_API_KEY`) is tried first — called
+   directly against `api.groq.com`, not proxied through OpenRouter — first `openai/gpt-oss-120b`
+   then `llama-3.3-70b-versatile` then `qwen/qwen3.8-27b`, each capped at
+   `GROQ_MAX_CALLS_PER_RUN` calls per run (separately, since each model has its own rate-limit
+   bucket) and short-circuited on the first HTTP 429 for that model; only if all three Groq
+   models hard-fail does it try NVIDIA direct (`_request_label_nvidia`, `NVIDIA_API_KEY`, model
+   `nvidia/nemotron-3-ultra-550b-a55b`); only if NVIDIA also fails does it try Cerebras
+   (`_request_label_cerebras`, `CEREBRAS_API_KEY`) — called directly against `api.cerebras.ai`,
+   not proxied through OpenRouter — model `qwen-3-32b`, capped at `CEREBRAS_MAX_CALLS_PER_RUN`
+   calls per run and short-circuited the same way; only if NVIDIA and Cerebras both fail does it
+   try OpenRouter (`_request_label_openrouter`, `OPENROUTER_API_KEY`) as a last opinion, capped
+   at `OPENROUTER_MAX_CALLS_PER_RUN` calls per run and short-circuited immediately on the first
+   HTTP 429; only if *all six* fail does it call `classify_keywords`. Results are cached on disk
+   (`llm_cache.json`, keyed by `email_id`, recording which provider produced each label —
+   `groq_gpt_oss_120b`, `groq_llama_70b`, `groq_qwen_27b`, `nvidia`, `cerebras_qwen_32b`, or
+   `openrouter`) and every fallback reason from all six providers is logged to
+   `llm_fallbacks.log`
+   (`groq_gpt_oss_120b:<reason>;groq_llama_70b:<reason>;groq_qwen_27b:<reason>;nvidia:<reason>;cerebras_qwen_32b:<reason>;openrouter:<reason>`).
 2. **Extract attachment text** (`attachment_text`): dispatches on file suffix — `.txt` read
    directly, `.docx`/`.xlsx` parsed by hand via `zipfile` + `xml.etree` (no external deps),
    `.pdf` via the optional `pypdf` if installed, else treated as unreadable.

@@ -15,6 +15,7 @@ import { MetricsRow } from "./components/MetricsRow";
 import { CaseTable } from "./components/CaseTable";
 import { ActivityPanel } from "./components/ActivityPanel";
 import { PlaceholderView } from "./components/PlaceholderView";
+import { AnalyticsView } from "./components/AnalyticsView";
 import { ReviewQueueView } from "./components/ReviewQueueView";
 import { CaseModal } from "./components/CaseModal";
 import { Toast } from "./components/Toast";
@@ -185,7 +186,11 @@ function App() {
             </section>
           )}
 
-          {!loadError && (view === "reports" || view === "analytics" || view === "settings") && (
+          {!loadError && view === "analytics" && (
+            <AnalyticsView emails={emails} reviewQueue={reviewQueue} />
+          )}
+
+          {!loadError && (view === "reports" || view === "settings") && (
             <PlaceholderView view={view} onOpenSample={() => sampleCaseId && setModalEmailId(sampleCaseId)} />
           )}
         </main>

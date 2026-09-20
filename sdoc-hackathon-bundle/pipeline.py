@@ -53,6 +53,10 @@ INVOICE_WORDS = ("invoice", "billing", "local charge", "thc", "freight charge",
                  "total freight")
 SI_REQUEST_WORDS = ("request si", "si needed", "cust si", "customer si",
                     "send the si", "shipping instruction needed")
+# Some templated reminder emails reuse an unrelated subject (billing notice,
+# vessel update, HR time-off) while the real SI-request text lives only in
+# the body - see CLAUDE.md's classification-ordering note.
+SI_REQUEST_BODY_RE = re.compile(r"\b(?:please|kindly)\s+submit\b[\s\S]{0,40}\bsi\b")
 COMPARISON_WORDS = ("confirm docs", "draft bl", "bill of lading", "shipping instruction",
                     "request bl draft", "check the details", "verify the bl", "bl matches", "amend bl")
 
@@ -68,12 +72,42 @@ LLM_LABELS = {
 CACHE_PATH = Path("llm_cache.json")
 FALLBACK_LOG_PATH = Path("llm_fallbacks.log")
 
-# Second-opinion provider, tried only when NVIDIA hard-fails. Free-tier
-# OpenRouter is rate-limited (20 req/min, 50/day) - a prior run that called it
-# unconditionally for every email in this ~520-email dataset exhausted the
-# quota almost immediately (near-total http_429). The cap and the
-# exhausted-flag short-circuit below exist specifically to prevent repeating
-# that failure mode.
+# Second/third/fourth/fifth-opinion providers, tried only when NVIDIA
+# hard-fails, called directly against each provider's own API (not proxied
+# through OpenRouter) so each draws from its own quota. Preference order is
+# evidence-based, from a live head-to-head test on this dataset's hardest
+# emails (see PR/chat history, not reproduced here): both Groq models had
+# zero failures and the best accuracy (94%); NVIDIA was accurate when it
+# answered but failed ~31% of the time (mostly rate limits); Gemini
+# 3.6/3.5-Flash-Lite were removed after testing showed 3.6 Flash rate-limits
+# almost immediately even at conservative pacing, and 3.5 Flash-Lite has the
+# worst accuracy of any tested provider (69%) while never hard-failing - the
+# worst combination, since it silently wins the cascade with wrong answers
+# instead of letting a more reliable tier take over. Cascade order:
+# Groq GPT-OSS 120B -> Groq Llama 3.3 70B -> Groq Qwen3.8-27B -> NVIDIA ->
+# Cerebras Qwen3-32B -> OpenRouter -> keyword rules.
+# Free-tier OpenRouter is rate-limited (20 req/min, 50/day) - a prior run
+# that called it unconditionally for every email in this ~520-email dataset
+# exhausted the quota almost immediately (near-total http_429). The cap and
+# the exhausted-flag short-circuit below exist specifically to prevent
+# repeating that failure mode.
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL_PRIMARY = "openai/gpt-oss-120b"  # preferred Groq fallback
+GROQ_MODEL_SECONDARY = "llama-3.3-70b-versatile"  # tried if GPT-OSS 120B fails
+GROQ_MODEL_TERTIARY = "qwen/qwen3.8-27b"  # tried if both above fail
+GROQ_MAX_CALLS_PER_RUN = int(os.environ.get("GROQ_MAX_CALLS_PER_RUN", "200"))
+
+# Cerebras, called directly against its own API (OpenAI-compatible chat
+# completions, same shape as Groq). qwen-3-32b was chosen for its free-tier
+# rate limit (Cerebras scales free-tier quota down with model size, and this
+# sits in a more generous bracket than 70B+ models) and for model-family
+# diversity from everything else in this cascade. Pacing/cap below are
+# conservative defaults - verify current free-tier RPM/RPD on
+# cloud.cerebras.ai and tune if this proves too slow or too easily exhausted.
+CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
+CEREBRAS_MODEL = "qwen-3-32b"
+CEREBRAS_MAX_CALLS_PER_RUN = int(os.environ.get("CEREBRAS_MAX_CALLS_PER_RUN", "200"))
+
 OPENROUTER_MODEL = "google/gemini-2.0-flash-001"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MAX_CALLS_PER_RUN = int(os.environ.get("OPENROUTER_MAX_CALLS_PER_RUN", "40"))
@@ -92,13 +126,15 @@ LABELS = {
 
 def classify_keywords(email: dict) -> str:
     subject = email.get("subject", "").casefold()
+    body = email.get("body", "").casefold()
     text = f"{subject}\n{email.get('body', '')}".casefold()
     if any(word in text for word in SPAM_WORDS):
         return "SPAM"
     # SI emails often attach an instruction that lists required invoices, so
     # identify the explicit SI-request subject before invoice terminology.
     if (any(word in subject for word in SI_REQUEST_WORDS)
-            or re.search(r"(?:^|[_\s])si\s*[-_]", subject)):
+            or re.search(r"(?:^|[_\s])si\s*[-_]", subject)
+            or SI_REQUEST_BODY_RE.search(body)):
         return "SI_REQUEST"
     attachments = " ".join(email.get("attachments", ())).casefold()
     if (any(word in subject for word in COMPARISON_WORDS)
@@ -114,16 +150,26 @@ def classify_keywords(email: dict) -> str:
 
 
 class LLMClassifier:
-    """Two-LLM-opinion classifier (NVIDIA, then OpenRouter) with an on-disk
-    result cache and a deterministic keyword fallback if both are down."""
+    """Six-LLM-opinion classifier (Groq GPT-OSS 120B, then Groq Llama 3.3
+    70B, then Groq Qwen3.8-27B, then NVIDIA, then Cerebras Qwen3-32B, then
+    OpenRouter) with an on-disk result cache and a deterministic keyword
+    fallback if all are down."""
 
     def __init__(self, cache_path: Path = CACHE_PATH, fallback_log_path: Path = FALLBACK_LOG_PATH):
         self.cache_path = cache_path
         self.fallback_log_path = fallback_log_path
         self.api_key = os.environ.get("NVIDIA_API_KEY", "")
+        self.groq_api_key = os.environ.get("GROQ_API_KEY", "")
+        self.cerebras_api_key = os.environ.get("CEREBRAS_API_KEY", "")
         self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY", "")
         self.lock = threading.Lock()
         self.fallbacks: list[tuple[str, str]] = []
+        self._groq_calls: dict[str, int] = {}
+        self._groq_exhausted: dict[str, threading.Event] = {}
+        self._groq_last_call: dict[str, float] = {}
+        self._cerebras_calls = 0
+        self._cerebras_exhausted = threading.Event()
+        self._cerebras_last_call = 0.0
         self._openrouter_calls = 0
         self._openrouter_exhausted = threading.Event()
         self._openrouter_last_call = 0.0
@@ -143,7 +189,9 @@ class LLMClassifier:
                 # produced by NVIDIA.
                 cache[email_id] = {"label": value, "provider": "nvidia"}
             elif (isinstance(value, dict) and value.get("label") in LLM_LABELS
-                    and value.get("provider") in ("nvidia", "openrouter")):
+                    and value.get("provider") in (
+                        "nvidia", "groq_gpt_oss_120b", "groq_llama_70b", "groq_qwen_27b",
+                        "cerebras_qwen_32b", "openrouter")):
                 cache[email_id] = value
         return cache
 
@@ -199,6 +247,165 @@ class LLMClassifier:
                 reason = f"api_error_{type(error).__name__.lower()}"
             if attempt < 3:
                 time.sleep(2 ** (attempt + 1))
+        return None, reason
+
+    def _request_label_groq(
+        self, email: dict, model: str, reasoning_effort: str | None = None
+    ) -> tuple[str | None, str | None]:
+        """LLM opinion against Groq's own API (not proxied through
+        OpenRouter), tried only after NVIDIA has failed. Each Groq model has
+        its own separate free-tier rate-limit bucket (30 RPM/1,000 RPD/8,000
+        TPM), so calls/exhaustion/pacing are tracked per model id."""
+        if not self.groq_api_key:
+            return None, "missing_api_key"
+        exhausted = self._groq_exhausted.setdefault(model, threading.Event())
+        if exhausted.is_set():
+            return None, "budget_exhausted"
+        with self.lock:
+            calls = self._groq_calls.get(model, 0)
+            if calls >= GROQ_MAX_CALLS_PER_RUN:
+                exhausted.set()
+                return None, "budget_exhausted"
+            self._groq_calls[model] = calls + 1
+            last_call = self._groq_last_call.get(model, 0.0)
+            wait = 2.1 - (time.monotonic() - last_call)
+            self._groq_last_call[model] = time.monotonic() + max(wait, 0)
+        if wait > 0:
+            time.sleep(wait)
+
+        labels = ", ".join(f'"{label}"' for label in LLM_LABELS)
+        prompt = (
+            f"Classify this shipping email into exactly one label: {labels}.\n"
+            "Return only a JSON string value containing the label, with no other text.\n\n"
+            f"Subject: {email.get('subject', '')}\n\nBody:\n{email.get('body', '')}"
+        )
+        payload = {
+            "model": model,
+            "temperature": 0,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if reasoning_effort:
+            payload["reasoning_effort"] = reasoning_effort
+        body = json.dumps(payload).encode("utf-8")
+        reason = "unknown_error"
+        for attempt in range(2):
+            try:
+                request = Request(
+                    GROQ_URL,
+                    data=body,
+                    headers={
+                        "Authorization": f"Bearer {self.groq_api_key}",
+                        "Content-Type": "application/json",
+                        # Groq's Cloudflare front end returns 403 (error 1010)
+                        # for requests with no/default User-Agent, which is
+                        # what urllib sends unless overridden here.
+                        "User-Agent": "sdoc-hackathon-pipeline/1.0",
+                    },
+                    method="POST",
+                )
+                with urlopen(request, timeout=30) as response:
+                    result = json.loads(response.read().decode("utf-8"))
+                content = result["choices"][0]["message"]["content"]
+                label = json.loads(content.strip())
+                if isinstance(label, dict) and isinstance(label.get("label"), str):
+                    # GPT-OSS 120B sometimes wraps the answer as
+                    # {"label": "..."} instead of a bare JSON string despite
+                    # the prompt asking for the latter - accept both shapes.
+                    label = label["label"]
+                if isinstance(label, str) and label in LLM_LABELS:
+                    return label, None
+                reason = "bad_label"
+            except HTTPError as error:
+                reason = f"http_{error.code}"
+                if error.code == 429:
+                    # A real rate-limit hit - stop sending any further
+                    # requests to this specific Groq model for the rest of
+                    # this run (the other Groq model keeps its own budget).
+                    exhausted.set()
+                    return None, reason
+            except TimeoutError:
+                reason = "timeout"
+            except URLError as error:
+                reason = "timeout" if "timed out" in str(error.reason).lower() else "network_error"
+            except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
+                reason = "bad_response"
+            except Exception as error:
+                reason = f"api_error_{type(error).__name__.lower()}"
+            if attempt < 1:
+                time.sleep(3 * (attempt + 1))
+        return None, reason
+
+    def _request_label_cerebras(self, email: dict) -> tuple[str | None, str | None]:
+        """LLM opinion against Cerebras's own API (OpenAI-compatible chat
+        completions, same shape as Groq), tried only after NVIDIA and all
+        three Groq models have failed. See the module-level comment on
+        CEREBRAS_MODEL for why this model/pacing was chosen and the caveat
+        that the pacing is a conservative default, not a confirmed limit."""
+        if not self.cerebras_api_key:
+            return None, "missing_api_key"
+        if self._cerebras_exhausted.is_set():
+            return None, "budget_exhausted"
+        with self.lock:
+            if self._cerebras_calls >= CEREBRAS_MAX_CALLS_PER_RUN:
+                self._cerebras_exhausted.set()
+                return None, "budget_exhausted"
+            self._cerebras_calls += 1
+            wait = 3.0 - (time.monotonic() - self._cerebras_last_call)
+            self._cerebras_last_call = time.monotonic() + max(wait, 0)
+        if wait > 0:
+            time.sleep(wait)
+
+        labels = ", ".join(f'"{label}"' for label in LLM_LABELS)
+        prompt = (
+            f"Classify this shipping email into exactly one label: {labels}.\n"
+            "Return only a JSON string value containing the label, with no other text.\n\n"
+            f"Subject: {email.get('subject', '')}\n\nBody:\n{email.get('body', '')}"
+        )
+        payload = {
+            "model": CEREBRAS_MODEL,
+            "temperature": 0,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        body = json.dumps(payload).encode("utf-8")
+        reason = "unknown_error"
+        for attempt in range(2):
+            try:
+                request = Request(
+                    CEREBRAS_URL,
+                    data=body,
+                    headers={
+                        "Authorization": f"Bearer {self.cerebras_api_key}",
+                        "Content-Type": "application/json",
+                        "User-Agent": "sdoc-hackathon-pipeline/1.0",
+                    },
+                    method="POST",
+                )
+                with urlopen(request, timeout=30) as response:
+                    result = json.loads(response.read().decode("utf-8"))
+                content = result["choices"][0]["message"]["content"]
+                label = json.loads(content.strip())
+                if isinstance(label, dict) and isinstance(label.get("label"), str):
+                    label = label["label"]
+                if isinstance(label, str) and label in LLM_LABELS:
+                    return label, None
+                reason = "bad_label"
+            except HTTPError as error:
+                reason = f"http_{error.code}"
+                if error.code == 429:
+                    # A real rate-limit hit - stop sending any further
+                    # Cerebras requests for the rest of this run.
+                    self._cerebras_exhausted.set()
+                    return None, reason
+            except TimeoutError:
+                reason = "timeout"
+            except URLError as error:
+                reason = "timeout" if "timed out" in str(error.reason).lower() else "network_error"
+            except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
+                reason = "bad_response"
+            except Exception as error:
+                reason = f"api_error_{type(error).__name__.lower()}"
+            if attempt < 1:
+                time.sleep(3 * (attempt + 1))
         return None, reason
 
     def _request_label_openrouter(self, email: dict) -> tuple[str | None, str | None]:
@@ -275,9 +482,31 @@ class LLMClassifier:
         if cached:
             return LLM_LABELS[cached["label"]]
 
+        label, groq_120b_reason = self._request_label_groq(
+            email, GROQ_MODEL_PRIMARY, reasoning_effort="low"
+        )
+        if label:
+            self._store_cache(email_id, label, "groq_gpt_oss_120b")
+            return LLM_LABELS[label]
+
+        label, groq_70b_reason = self._request_label_groq(email, GROQ_MODEL_SECONDARY)
+        if label:
+            self._store_cache(email_id, label, "groq_llama_70b")
+            return LLM_LABELS[label]
+
+        label, groq_27b_reason = self._request_label_groq(email, GROQ_MODEL_TERTIARY)
+        if label:
+            self._store_cache(email_id, label, "groq_qwen_27b")
+            return LLM_LABELS[label]
+
         label, nvidia_reason = self._request_label_nvidia(email)
         if label:
             self._store_cache(email_id, label, "nvidia")
+            return LLM_LABELS[label]
+
+        label, cerebras_reason = self._request_label_cerebras(email)
+        if label:
+            self._store_cache(email_id, label, "cerebras_qwen_32b")
             return LLM_LABELS[label]
 
         label, openrouter_reason = self._request_label_openrouter(email)
@@ -285,7 +514,12 @@ class LLMClassifier:
             self._store_cache(email_id, label, "openrouter")
             return LLM_LABELS[label]
 
-        self._log_fallback(email_id, f"nvidia:{nvidia_reason};openrouter:{openrouter_reason}")
+        self._log_fallback(
+            email_id,
+            f"groq_gpt_oss_120b:{groq_120b_reason};groq_llama_70b:{groq_70b_reason};"
+            f"groq_qwen_27b:{groq_27b_reason};nvidia:{nvidia_reason};"
+            f"cerebras_qwen_32b:{cerebras_reason};openrouter:{openrouter_reason}",
+        )
         return classify_keywords(email)
 
     def _store_cache(self, email_id: str, label: str, provider: str) -> None:
@@ -397,7 +631,7 @@ def extract_fields(text: str) -> dict[str, str | None]:
             # catastrophic backtracking on lines with no real separator.
             match = re.search(
                 rf"(?im)^\s*(?:{label})(?:[ \t]*(?:\([^)\r\n]*\)|[^\r\n:\-\u2013()]+)){{0,5}}"
-                rf"[ \t]*(?::|\-|\u2013)\s*([^\r\n]+)",
+                rf"[ \t]*(?::|\-|\u2013)[ \t]*([^\r\n]+)",
                 text,
             )
             if match:
@@ -446,7 +680,13 @@ def compare(email: dict, inbox: Inbox) -> dict:
     # "attachments", so a bare "attach" substring check false-positives on
     # every attachment-less email; require an actual attach-intent phrase.
     if not si_paths and not bl_paths:
-        if re.search(r"pleas\w*\s+(?:find|see)\s+(?:the\s+)?attach|draft\s+bl\s+attached|is\s+attached", message) or "enclosed" in message:
+        if (re.search(
+                r"pleas\w*\s+(?:find|see)\s+(?:the\s+)?attach"
+                r"|draft\s+bl\s+attached|is\s+attached"
+                r"|attach\w*\s+(?:appear|seem)\w*\s+(?:to\s+have\s+been\s+)?(?:dropped|missing|lost)"
+                r"|fail\w*\s+to\s+attach|didn'?t\s+attach|couldn'?t\s+attach|not\s+attached",
+                message)
+                or "enclosed" in message):
             return review("missing_attachment")
         return ok()
     if not si_paths or not bl_paths:
