@@ -101,92 +101,19 @@ Reproduce with `cd sdoc-hackathon-bundle && python check_score.py`.
 
 ## 3. AI stack — where AI is used
 
-There are **two separate AI integrations**, on **different stacks**, serving different jobs.
-They are intentionally not shared code: one is a batch scorer, the other an interactive
-single-email tester.
+### 3.1 Email intent classification
 
-### 3.1 Batch classifier — `sdoc-hackathon-bundle/pipeline.py`
+The Supabase Edge Function applies deterministic weighted rules first, then calls the Email Classifier AI Stack for ambiguous cases: three Groq models, NVIDIA Nemotron, then Cerebras Qwen. Provider decisions are cached and audited in Postgres. API keys are Supabase function secrets, never frontend variables.
 
-**Job:** label all 520 emails in one run, to produce the scored `submission.json`.
-**Runtime:** Python 3, standard library only (`urllib`) — no SDKs, no external deps.
-**Class:** `LLMClassifier`
+The local batch classifier uses the same provider family before its keyword fallback. Its SI/BL comparison remains deterministic Python code; models do not decide whether document fields match.
 
-A **six-provider cascade**, each tier tried only when the one above hard-fails:
+### 3.2 Hosted and local processing boundary
 
-| Order | Provider | Model | Endpoint | Env var |
-|---|---|---|---|---|
-| 1 | Groq | `openai/gpt-oss-120b` | `api.groq.com` | `GROQ_API_KEY` |
-| 2 | Groq | `llama-3.3-70b-versatile` | `api.groq.com` | `GROQ_API_KEY` |
-| 3 | Groq | `qwen/qwen3.8-27b` | `api.groq.com` | `GROQ_API_KEY` |
-| 4 | NVIDIA | `nvidia/nemotron-3-ultra-550b-a55b` | `integrate.api.nvidia.com` | `NVIDIA_API_KEY` |
-| 5 | Cerebras | `qwen-3-32b` | `api.cerebras.ai` | `CEREBRAS_API_KEY` |
-| 6 | OpenRouter | `google/gemini-2.0-flash-001` | `openrouter.ai` | `OPENROUTER_API_KEY` |
-| 7 | *(no AI)* | `classify_keywords` | local | — |
+The frontend supports shared case intake and file upload through Supabase. The batch pipeline extracts PDF, DOCX, XLSX, and text attachments and syncs completed field comparisons to Supabase. Browser-created cases are classified but do not yet run through a hosted document extractor/comparator, so they remain pending comparison.
 
-- Every provider is called **directly against its own API**, not proxied through OpenRouter, so
-  each draws on a separate free-tier quota.
-- Order is **evidence-based**, from a live head-to-head on the hardest emails: Groq had zero
-  failures and the best accuracy (94%); NVIDIA was accurate but hard-failed ~31% of the time
-  (mostly rate limits). Two Gemini models were tested in this chain and **removed** —
-  `gemini-3.6-flash` rate-limited almost immediately, and `gemini-3.5-flash-lite` had the worst
-  accuracy (69%) while never hard-failing, the worst combination for a fallback tier.
-- **Request shape:** `temperature: 0`, single user message, one-of-five label, JSON-string reply.
-- **Rate-limit defence:** per-model call caps (`GROQ_MAX_CALLS_PER_RUN` 200,
-  `CEREBRAS_MAX_CALLS_PER_RUN` 200, `OPENROUTER_MAX_CALLS_PER_RUN` 40), 2.1s pacing per model,
-  immediate short-circuit on the first HTTP 429, 2 attempts with backoff, 30s timeout.
-- **Caching:** `llm_cache.json`, keyed by `email_id`, recording which provider produced each
-  label. Fallback reasons from all six providers are logged to `llm_fallbacks.log`.
-- **Concurrency:** `ThreadPoolExecutor(max_workers=2)` — sized to the free-tier limit.
-- **Graceful degradation:** with no keys and no network the pipeline still produces a valid
-  scored `submission.json` via `classify_keywords`. That deterministic floor is what currently
-  scores 1.0000 — the AI tiers are a resilience layer, not a crutch.
+### 3.3 Where AI is deliberately not used
 
-> **Live-testing notes baked into the code:** Groq's Cloudflare front end 403s requests with a
-> default `User-Agent` (which is what Python's `urllib` sends), so one is set explicitly; and
-> `gpt-oss-120b` sometimes wraps its answer as `{"label": "..."}` instead of a bare JSON string,
-> so the parser accepts both shapes.
-
-### 3.2 Interactive classifier — `supabase/functions/identify-document-request/`
-
-**Job:** classify **one** email on demand, from the Classifier Lab tab, with a full audit trail.
-**Runtime:** Deno / TypeScript, deployed as a **Supabase Edge Function** (cloud infrastructure).
-**Called by:** `frontend/src/features/inbox/api/identifyDocumentRequest.ts` via
-`supabase.functions.invoke`.
-
-A **two-tier** design — deliberately not the same cascade as §3.1:
-
-1. **Deterministic weighted rules first** (`supabase/functions/_shared/document-classifier.ts`).
-   Each rule contributes a weight to a category. The rules decide alone only when the result is
-   **decisive** — top score ≥ 5 **and** a margin ≥ 2 over the runner-up. No model is called, and
-   `method: "deterministic"` is recorded with the matched reasons.
-2. **AI only for genuinely ambiguous cases** — OpenRouter `google/gemini-2.0-flash-001`, with
-   `temperature: 0`, `seed: 20260919`, `max_tokens: 140`, `provider.require_parameters: true`,
-   and a **strict JSON-schema `response_format`** so the model cannot return free text.
-
-- **Persistence:** every decision is written to Postgres (`classification_decisions`,
-  `classification_runs`) with its `input_hash`, method, model, reasons and
-  `raw_model_output` — so any label can be audited after the fact.
-- **Caching:** by `input_hash`; a repeat of the same email reuses the stored decision, and the
-  saved row is re-read so the database is the authority under concurrency.
-- **Security:** the function uses the service-role key and is the only thing that touches those
-  two tables; they stay locked down under RLS while the dashboard's anon key cannot read them.
-
-### 3.3 Where AI is deliberately **not** used
-
-**Comparison is never a model call.** Once fields are extracted, deciding match vs. mismatch vs.
-formatting variant is plain deterministic Python. Every reported value must be traceable to an
-exact substring in the source document; a value that cannot be verified is dropped and the field
-is escalated to a human rather than reported as fact.
-
-This is the core design principle — *the AI reads, code decides* — and it is why every
-discrepancy in the report is reproducible and none can be hallucinated. It is also worth stating
-plainly in the deck and the video: it is the answer to "how do you know the AI didn't make this
-up?"
-
-No vision model is used anywhere; the pipeline is text-only.
-
----
-
+Extracted values must be grounded in document text. SI/BL matching, mismatch detection, and normalization are deterministic; incomplete or unreadable evidence should go to human review.
 ## 4. What to do next, in priority order
 
 1. **Write the root `README.md`** with setup instructions — mandatory, and judges read it first.

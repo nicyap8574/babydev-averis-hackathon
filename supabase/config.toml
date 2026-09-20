@@ -4,6 +4,12 @@
 # working directory name when running `supabase init`.
 project_id = "babydev-averis-hackathon"
 
+[functions.identify-document-request]
+# This is a single shared workspace with no sign-in. The function is invoked
+# from the browser using the public publishable key; all privileged writes use
+# the server-side service-role key.
+verify_jwt = false
+
 [api]
 enabled = true
 # Port to use for the API URL.

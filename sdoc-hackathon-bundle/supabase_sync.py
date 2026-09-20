@@ -9,8 +9,7 @@ SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY env vars the Supabase Edge Function
 (supabase/functions/identify-document-request) already uses.
 
 Talks to Supabase's PostgREST REST API directly via urllib, matching the
-rest of this file's dependency-free style (see pipeline.py's NVIDIA/
-OpenRouter calls) - no supabase-py, no .env loading.
+rest of this file's dependency-free style (see pipeline.py's provider calls) - no supabase-py, no .env loading.
 """
 from __future__ import annotations
 

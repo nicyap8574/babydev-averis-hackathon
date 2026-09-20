@@ -53,6 +53,8 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
           : "";
   const verdictText = !detail
     ? ""
+    : isComparison && !detail.status
+      ? "Waiting for document comparison"
     : !isComparison
       ? "Not applicable"
       : detail.status === "OK"
@@ -62,6 +64,10 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
           : `${mismatchCount} mismatch${mismatchCount === 1 ? "" : "es"} detected`;
   const headline = !detail
     ? ""
+    : detail.workflow_status === "classification_failed"
+      ? "Classification could not complete"
+    : isComparison && !detail.status
+      ? "Case received; comparison is pending"
     : !isComparison
       ? `Classified as ${detail.category.replace(/_/g, " ").toLowerCase()}`
       : detail.status === "OK"
@@ -119,6 +125,13 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
                 </div>
               </div>
 
+              {detail.attachment_names.length > 0 && (
+                <div className="case-attachments">
+                  <strong>Attached files</strong>
+                  <ul>{detail.attachment_names.map((name, index) => <li key={`${name}-${index}`}>{name}</li>)}</ul>
+                </div>
+              )}
+
               {showComparison ? (
                 <>
                   <div className="compare-head">
@@ -169,11 +182,19 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
                     <Icon id="i-info" />
                   </span>
                   <strong>
-                    {isComparison ? "No attachment data available" : "No document comparison for this category"}
+                    {detail.workflow_status === "classification_failed"
+                      ? "Case is saved; classification needs attention"
+                      : isComparison
+                        ? (detail.status ? "No attachment data available" : "Comparison not yet run")
+                        : "No document comparison for this category"}
                   </strong>
                   <span>
-                    {isComparison
-                      ? "The SI/BL attachment pair for this email is missing or couldn't be read, so field-by-field comparison couldn't run."
+                    {detail.workflow_status === "classification_failed"
+                      ? detail.last_error ?? "The classifier could not process this case. Check provider secrets and function logs."
+                      : isComparison
+                      ? detail.status
+                        ? "The SI/BL attachment pair for this email is missing or couldn't be read, so field-by-field comparison couldn't run."
+                        : `Classification is ${detail.workflow_status.replace(/_/g, " ")}. Document comparison still needs to be connected to the hosted processing service.`
                       : "Only emails classified as BL comparison are checked field-by-field against a shipping instruction."}
                   </span>
                 </div>

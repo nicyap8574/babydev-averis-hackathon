@@ -76,9 +76,9 @@ LLM_LABELS = {
 CACHE_PATH = Path("llm_cache.json")
 FALLBACK_LOG_PATH = Path("llm_fallbacks.log")
 
-# Second/third/fourth/fifth-opinion providers, tried only when NVIDIA
+# Groq model opinions, NVIDIA, then Cerebras; deterministic rules are last.
 # hard-fails, called directly against each provider's own API (not proxied
-# through OpenRouter) so each draws from its own quota. Preference order is
+# directly against each provider API so each draws from its own quota. Preference order is
 # evidence-based, from a live head-to-head test on this dataset's hardest
 # emails (see PR/chat history, not reproduced here): both Groq models had
 # zero failures and the best accuracy (94%); NVIDIA was accurate when it
@@ -89,12 +89,7 @@ FALLBACK_LOG_PATH = Path("llm_fallbacks.log")
 # worst combination, since it silently wins the cascade with wrong answers
 # instead of letting a more reliable tier take over. Cascade order:
 # Groq GPT-OSS 120B -> Groq Llama 3.3 70B -> Groq Qwen3.8-27B -> NVIDIA ->
-# Cerebras Qwen3-32B -> OpenRouter -> keyword rules.
-# Free-tier OpenRouter is rate-limited (20 req/min, 50/day) - a prior run
-# that called it unconditionally for every email in this ~520-email dataset
-# exhausted the quota almost immediately (near-total http_429). The cap and
-# the exhausted-flag short-circuit below exist specifically to prevent
-# repeating that failure mode.
+# Cerebras Qwen3-32B -> keyword rules.
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL_PRIMARY = "openai/gpt-oss-120b"  # preferred Groq fallback
 GROQ_MODEL_SECONDARY = "llama-3.3-70b-versatile"  # tried if GPT-OSS 120B fails
@@ -112,9 +107,6 @@ CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
 CEREBRAS_MODEL = "qwen-3-32b"
 CEREBRAS_MAX_CALLS_PER_RUN = int(os.environ.get("CEREBRAS_MAX_CALLS_PER_RUN", "200"))
 
-OPENROUTER_MODEL = "google/gemini-2.0-flash-001"
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MAX_CALLS_PER_RUN = int(os.environ.get("OPENROUTER_MAX_CALLS_PER_RUN", "40"))
 
 LABELS = {
     "shipper": (r"shipper(?:\s*/\s*exporter)?", r"exporter", r"seller"),
@@ -185,10 +177,7 @@ def classify_keywords(email: dict) -> str:
 
 
 class LLMClassifier:
-    """Six-LLM-opinion classifier (Groq GPT-OSS 120B, then Groq Llama 3.3
-    70B, then Groq Qwen3.8-27B, then NVIDIA, then Cerebras Qwen3-32B, then
-    OpenRouter) with an on-disk result cache and a deterministic keyword
-    fallback if all are down."""
+    """Provider cascade with a result cache and deterministic keyword fallback."""
 
     def __init__(self, cache_path: Path = CACHE_PATH, fallback_log_path: Path = FALLBACK_LOG_PATH):
         self.cache_path = cache_path
@@ -196,7 +185,6 @@ class LLMClassifier:
         self.api_key = os.environ.get("NVIDIA_API_KEY", "")
         self.groq_api_key = os.environ.get("GROQ_API_KEY", "")
         self.cerebras_api_key = os.environ.get("CEREBRAS_API_KEY", "")
-        self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY", "")
         self.lock = threading.Lock()
         self.fallbacks: list[tuple[str, str]] = []
         self._groq_calls: dict[str, int] = {}
@@ -205,9 +193,6 @@ class LLMClassifier:
         self._cerebras_calls = 0
         self._cerebras_exhausted = threading.Event()
         self._cerebras_last_call = 0.0
-        self._openrouter_calls = 0
-        self._openrouter_exhausted = threading.Event()
-        self._openrouter_last_call = 0.0
         self.cache = self._load_cache(cache_path)
 
     @staticmethod
@@ -219,14 +204,13 @@ class LLMClassifier:
         cache: dict[str, dict[str, str]] = {}
         for email_id, value in raw.items():
             if isinstance(value, str) and value in LLM_LABELS:
-                # Legacy cache format (label only, written before the
-                # OpenRouter second opinion existed): those entries were all
+                # Legacy cache format (label only): those entries were all
                 # produced by NVIDIA.
                 cache[email_id] = {"label": value, "provider": "nvidia"}
             elif (isinstance(value, dict) and value.get("label") in LLM_LABELS
                     and value.get("provider") in (
                         "nvidia", "groq_gpt_oss_120b", "groq_llama_70b", "groq_qwen_27b",
-                        "cerebras_qwen_32b", "openrouter")):
+                        "cerebras_qwen_32b")):
                 cache[email_id] = value
         return cache
 
@@ -287,8 +271,8 @@ class LLMClassifier:
     def _request_label_groq(
         self, email: dict, model: str, reasoning_effort: str | None = None
     ) -> tuple[str | None, str | None]:
-        """LLM opinion against Groq's own API (not proxied through
-        OpenRouter), tried only after NVIDIA has failed. Each Groq model has
+        """LLM opinion against Groq's own API, tried before NVIDIA and Cerebras.
+        Each Groq model has
         its own separate free-tier rate-limit bucket (30 RPM/1,000 RPD/8,000
         TPM), so calls/exhaustion/pacing are tracked per model id."""
         if not self.groq_api_key:
@@ -443,73 +427,6 @@ class LLMClassifier:
                 time.sleep(3 * (attempt + 1))
         return None, reason
 
-    def _request_label_openrouter(self, email: dict) -> tuple[str | None, str | None]:
-        """Second LLM opinion, tried only after NVIDIA has failed. Capped and
-        throttled - see the module-level comment on OPENROUTER_MAX_CALLS_PER_RUN."""
-        if not self.openrouter_api_key:
-            return None, "missing_api_key"
-        if self._openrouter_exhausted.is_set():
-            return None, "budget_exhausted"
-        with self.lock:
-            if self._openrouter_calls >= OPENROUTER_MAX_CALLS_PER_RUN:
-                self._openrouter_exhausted.set()
-                return None, "budget_exhausted"
-            self._openrouter_calls += 1
-            wait = 3.5 - (time.monotonic() - self._openrouter_last_call)
-            self._openrouter_last_call = time.monotonic() + max(wait, 0)
-        if wait > 0:
-            time.sleep(wait)
-
-        labels = ", ".join(f'"{label}"' for label in LLM_LABELS)
-        prompt = (
-            f"Classify this shipping email into exactly one label: {labels}.\n"
-            "Return only a JSON string value containing the label, with no other text.\n\n"
-            f"Subject: {email.get('subject', '')}\n\nBody:\n{email.get('body', '')}"
-        )
-        payload = {
-            "model": OPENROUTER_MODEL,
-            "temperature": 0,
-            "messages": [{"role": "user", "content": prompt}],
-        }
-        body = json.dumps(payload).encode("utf-8")
-        reason = "unknown_error"
-        for attempt in range(2):
-            try:
-                request = Request(
-                    OPENROUTER_URL,
-                    data=body,
-                    headers={
-                        "Authorization": f"Bearer {self.openrouter_api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    method="POST",
-                )
-                with urlopen(request, timeout=30) as response:
-                    result = json.loads(response.read().decode("utf-8"))
-                content = result["choices"][0]["message"]["content"]
-                label = json.loads(content.strip())
-                if isinstance(label, str) and label in LLM_LABELS:
-                    return label, None
-                reason = "bad_label"
-            except HTTPError as error:
-                reason = f"http_{error.code}"
-                if error.code == 429:
-                    # A real rate-limit hit - stop sending any further
-                    # OpenRouter requests for the rest of this run.
-                    self._openrouter_exhausted.set()
-                    return None, reason
-            except TimeoutError:
-                reason = "timeout"
-            except URLError as error:
-                reason = "timeout" if "timed out" in str(error.reason).lower() else "network_error"
-            except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
-                reason = "bad_response"
-            except Exception as error:
-                reason = f"api_error_{type(error).__name__.lower()}"
-            if attempt < 1:
-                time.sleep(3 * (attempt + 1))
-        return None, reason
-
     def classify(self, email: dict) -> str:
         email_id = email["email_id"]
         with self.lock:
@@ -544,16 +461,11 @@ class LLMClassifier:
             self._store_cache(email_id, label, "cerebras_qwen_32b")
             return LLM_LABELS[label]
 
-        label, openrouter_reason = self._request_label_openrouter(email)
-        if label:
-            self._store_cache(email_id, label, "openrouter")
-            return LLM_LABELS[label]
-
         self._log_fallback(
             email_id,
             f"groq_gpt_oss_120b:{groq_120b_reason};groq_llama_70b:{groq_70b_reason};"
             f"groq_qwen_27b:{groq_27b_reason};nvidia:{nvidia_reason};"
-            f"cerebras_qwen_32b:{cerebras_reason};openrouter:{openrouter_reason}",
+            f"cerebras_qwen_32b:{cerebras_reason}",
         )
         return classify_keywords(email)
 
@@ -913,9 +825,7 @@ def run(source: str = "data") -> dict:
 
 
 def _build_case_rows(emails: list[dict], inbox: Inbox, submission: dict) -> dict[str, dict]:
-    """One row per email_id: the submission.json result plus its precomputed
-    field_comparison, the shape both supabase_sync.sync_submission() and the
-    local case-data.json fallback snapshot need."""
+    """One row per email_id for Supabase sync, with precomputed field comparisons."""
     rows = {}
     for email in emails:
         result = submission.get(email["email_id"])
@@ -926,44 +836,6 @@ def _build_case_rows(emails: list[dict], inbox: Inbox, submission: dict) -> dict
             "field_comparison": field_comparison_rows(email, inbox, result),
         }
     return rows
-
-
-def _write_case_data_snapshot(emails: list[dict], rows: dict[str, dict]) -> None:
-    """Write frontend/public/case-data.json: a static snapshot the review UI
-    reads when no Supabase project is configured, so the dashboard still
-    works with zero external services (mirrors what backend.py used to serve
-    before the UI became Supabase-native)."""
-    case_emails = []
-    review_queue = []
-    for email in emails:
-        result = rows.get(email["email_id"])
-        if result is None:
-            continue
-        case_emails.append({
-            "id": email["email_id"],
-            "subject": email.get("subject", ""),
-            "from": email.get("from", ""),
-            "category": result.get("category"),
-            "status": result.get("status"),
-            "review_reason": result.get("review_reason"),
-            "mismatches": sorted(result.get("defect_fields", [])),
-            "field_comparison": result.get("field_comparison", []),
-        })
-        if result.get("status") == "NEEDS_REVIEW":
-            review_queue.append({
-                "email_id": email["email_id"],
-                "subject": email.get("subject", ""),
-                "reason": result.get("review_reason"),
-                "resolved": False,
-                "resolution": None,
-            })
-
-    snapshot_path = Path(__file__).resolve().parent.parent / "frontend" / "public" / "case-data.json"
-    snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-    snapshot_path.write_text(
-        json.dumps({"emails": case_emails, "review_queue": review_queue}, indent=2) + "\n",
-        encoding="utf-8",
-    )
 
 
 def main() -> None:
@@ -978,11 +850,6 @@ def main() -> None:
     inbox = Inbox(_resolve_source(source))
     emails = list(inbox)
     rows = _build_case_rows(emails, inbox, submission)
-
-    try:
-        _write_case_data_snapshot(emails, rows)
-    except Exception as error:
-        print(f"[case-data] skipped: {error}", file=sys.stderr)
 
     try:
         from supabase_sync import sync_submission
