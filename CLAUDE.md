@@ -43,8 +43,17 @@ it's dropped and the field is escalated to human review (`NEEDS_REVIEW`) rather 
 as fact. **Comparison itself (match / mismatch / formatting variant) is always deterministic
 code, never a model call.** This is what keeps the system explainable and free of hallucinated
 discrepancies — hold this line even under time pressure. See `hackathon-solution-plan.md` for
-the full rationale and per-field comparison rules (normalize-before-compare for names/ports,
-exact match for container count, unit-converted with rounding-only tolerance for weight).
+the full rationale and per-field comparison rules — but note that document describes the
+*intended* rules, not all of which are implemented: `same_value` does **not** currently do unit
+conversion for weight, and several other normalizations are deliberately absent (see "Open
+decisions to track").
+
+The principle binds deterministic code too, not just model calls. The clearest instance is
+`extract_fields`'s blank-label guard: when a label appears as `SHIPPER: ` with nothing after it,
+the table-layout fallback is suppressed rather than allowed to borrow the next line's text. The
+value is dropped and the field escalates. Reaching for a nearby plausible value is the same
+failure as hallucinating one — in `email_519` it manufactured a 4-field mismatch out of a
+document that should simply have gone to a human.
 
 ## Tech stack
 
@@ -53,7 +62,7 @@ exact match for container count, unit-converted with rounding-only tolerance for
 - **AI model:** `pipeline.py`'s classification cascade is **Groq (GPT-OSS 120B, then Llama 3.3
   70B, then Qwen3.8-27B) → NVIDIA direct → Cerebras (Qwen3-32B) → OpenRouter → keyword rules**.
   This order is evidence-based, from a live head-to-head test of all providers against this
-  dataset's hardest/most-ambiguous emails: both Groq models tested had zero failures and the
+  dataset's hardest/most-ambiguous emails: the Groq models tested had zero failures and the
   best accuracy (94%), so Groq leads; NVIDIA was accurate when it answered but failed ~31% of
   the time (mostly rate limits), so it sits after Groq rather than first. Groq is called
   **directly against its own API** (`api.groq.com`, not proxied through OpenRouter —
@@ -111,8 +120,29 @@ exact match for container count, unit-converted with rounding-only tolerance for
 - [ ] Confirm/replace `google/gemini-2.0-flash-001` as the OpenRouter model, or switch it to
       `nvidia/nemotron-3-ultra-550b-a55b:free` to match the original target model.
 - [ ] OCR path for scanned/image-only attachments (Tesseract.js proposed, not implemented).
+      6 image-only PDFs (`email_512`–`email_514`) and 2 garbled/empty ones currently escalate as
+      `unreadable`, which is *correct* and scores full marks on the reliability axis — OCR would
+      win no points here, it's a demo/advanced-stage differentiator only.
 - [ ] Real auth, if this ever needs to be more than a single-reviewer hackathon demo — the open
       RLS policies above assume it isn't.
+
+### Comparison normalizations deliberately NOT implemented
+
+Each of the following would make two *differing* values compare equal, so each is a way to hide
+a real defect on unseen data. None is exercised by the current dataset (the pipeline scores
+1.0000 without them), so all are left strict by choice, not by oversight. `test_pipeline.py`'s
+`TestComparisonStaysStrict` pins the current behaviour — if you implement one, update that test
+and this list together.
+
+- [ ] UN/LOCODE suffix on ports: `BUATAN, INDONESIA` vs `BUATAN, INDONESIA (IDBUA)` reports a
+      mismatch. Narrowest and safest of the four if one is ever needed.
+- [ ] Weight unit conversion: `22000 KG` vs `22 MT` (and lbs) reports a mismatch. Note this is
+      the rule `hackathon-solution-plan.md` already *claims* exists.
+- [ ] Container size-first notation: `3 x 40'HC` vs `40'HC x 3` reports a mismatch, because
+      `normalise_number` takes the first number it sees (`40`).
+- [ ] Corporate suffix equivalence: `ACME CO. LTD` vs `ACME CO. LIMITED` reports a mismatch.
+      The loosest of the four — a consignee defect can be exactly this shape, so it is the one
+      least safe to add silently.
 
 ## Commands
 
@@ -129,6 +159,14 @@ python pipeline.py
 # OPENROUTER_MAX_CALLS_PER_RUN (default 40),
 # SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (optional — Supabase sync is skipped
 # without them, case-data.json is still written either way)
+
+# Pipeline tests (stdlib unittest, no deps, no network, no API keys)
+python -m unittest test_pipeline -v
+
+# Score the deterministic path against the organizers' ground_truth.json and
+# assert every axis is still 1.0. Skips cleanly (exit 0) from a plain bundle
+# checkout, where ground_truth.json isn't present.
+python check_score.py
 
 # Score a submission (from the organizers' kit, needs ground_truth.json which
 # participants do NOT have — organizers run this, or use the Docker /submit endpoint)
@@ -154,7 +192,8 @@ npm run evaluate:classifier # rule-only coverage/precision against the full data
 npx playwright test         # tests/ui/classifier-page.spec.ts, drives frontend/'s dev server
 ```
 
-There is no test suite, linter, or build step configured for `sdoc-hackathon-bundle/`.
+`sdoc-hackathon-bundle/` has tests (`test_pipeline.py`, `check_score.py` — see above) but no
+linter or build step configured.
 
 ### Scoring a submission without the organizers
 
@@ -195,12 +234,16 @@ the main score directly.
    deterministic fallback path (spam words → SI-request subject patterns → comparison
    subject/coded patterns or `_si`+`_bl` attachment pairing → invoice terms → default
    `GENERAL`). Order of the keyword checks matters — e.g. SI-request patterns are checked
-   before invoice terms because SI emails often list invoice numbers too. SI-request detection
-   also scans the message body (`SI_REQUEST_BODY_RE`) for an explicit "please/kindly submit ...
-   SI" phrase, since some templated reminder emails carry the real signal only in the body while
-   reusing an unrelated subject line (a billing notice, a vessel update, an HR time-off request);
-   the other categories remain subject-only since no equivalent body-only gap has been found for
-   them. `LLMClassifier.classify`
+   before invoice terms because SI emails often list invoice numbers too. Classification is
+   **subject-and-attachment only — deliberately not body-scanned.** A `SI_REQUEST_BODY_RE` body
+   scan for "please/kindly submit ... SI" used to sit here and was removed: all 7 emails carrying
+   that phrase are *broadcast reminders*, which ground truth labels `GENERAL`, including the ones
+   whose subject reads `_Reminder_Paper - Submit SI & AED_13-01-2026`. The rule cost 7 false
+   `SI_REQUEST`s and 7 `GENERAL` misses; without it `classify_keywords` alone scores **520/520
+   (macro-F1 1.000)**. `supabase/functions/_shared/document-classifier.ts` independently reached
+   the same conclusion — it matches `submit si & aed` as a routine `general_message` in both
+   subject and body — so the two classifiers now agree. Don't reintroduce a body scan for this
+   without re-checking it against `ground_truth.json`. `LLMClassifier.classify`
    is a six-stage cascade: Groq (`_request_label_groq`, `GROQ_API_KEY`) is tried first — called
    directly against `api.groq.com`, not proxied through OpenRouter — first `openai/gpt-oss-120b`
    then `llama-3.3-70b-versatile` then `qwen/qwen3.8-27b`, each capped at
@@ -210,7 +253,8 @@ the main score directly.
    `nvidia/nemotron-3-ultra-550b-a55b`); only if NVIDIA also fails does it try Cerebras
    (`_request_label_cerebras`, `CEREBRAS_API_KEY`) — called directly against `api.cerebras.ai`,
    not proxied through OpenRouter — model `qwen-3-32b`, capped at `CEREBRAS_MAX_CALLS_PER_RUN`
-   calls per run and short-circuited the same way; only if NVIDIA and Cerebras both fail does it
+   calls per run and short-circuited the same way; only if all three Groq models, NVIDIA, and
+   Cerebras have all failed does it
    try OpenRouter (`_request_label_openrouter`, `OPENROUTER_API_KEY`) as a last opinion, capped
    at `OPENROUTER_MAX_CALLS_PER_RUN` calls per run and short-circuited immediately on the first
    HTTP 429; only if *all six* fail does it call `classify_keywords`. Results are cached on disk
@@ -222,14 +266,35 @@ the main score directly.
 2. **Extract attachment text** (`attachment_text`): dispatches on file suffix — `.txt` read
    directly, `.docx`/`.xlsx` parsed by hand via `zipfile` + `xml.etree` (no external deps),
    `.pdf` via the optional `pypdf` if installed, else treated as unreadable.
-3. **Extract fields** (`extract_fields`): regex-matches each field's synonym labels
-   line-by-line against the attachment text.
+3. **Extract fields** (`extract_fields`): **two passes**, because the two document families
+   label their fields differently. Pass 1 is the `Label: value` form used by the `.txt`/`.xlsx`
+   templates (`_match_inline_label`), allowing a leading qualifier (`LABEL_QUALIFIER`, so
+   `TOTAL Gross Weight (KG): 131,322` still matches) and a trailing `/...` on the label
+   (`LABEL_SUFFIX`, for `Notify Party/Intermediate Consignee`). Pass 2 (`_match_block_label`)
+   handles the `.docx`/`.pdf` **table layouts**, which flatten to the label on one line and its
+   value on the next (`Port of Discharge (卸货港)\nBRISBANE, AUSTRALIA`); `_strip_gloss` drops
+   parenthetical and CJK glosses so the label is recognisable. Pass 2 collects multiple lines for
+   the party fields (addresses wrap) but exactly one for `SINGLE_LINE_FIELDS` (ports, count,
+   weight) — without that split a port value runs on into the vessel block below it — and stops
+   at a blank line or any `LABEL_LINE_RE` hit, which covers the 7 target labels **plus**
+   `OTHER_LABELS` (vessel, commodity, HS code, booking no., …) that also terminate a value here.
+   Before this existed, every `.docx`/`.pdf` pair extracted *nothing* and escalated
+   `missing_value`, hiding 10 real defects.
+   **The critical guard:** pass 2 never runs for a field whose label *did* appear in colon form
+   but blank (the `inline_labels` set). A bare `SHIPPER: ` in `email_519_SI.txt` would otherwise
+   let the block reader walk onto the next line and take the consignee, turning a correct
+   `missing_value` escalation into a fabricated 4-field mismatch — see the Core principle above.
 4. **Compare** (`compare`): finds the SI/BL attachment pair by filename convention (`*_si.*`
    / `*_bl.*`), extracts both, and only after confirming both documents are the expected type
    (`"shipping instruction"` / `"bill of lading"` text present) and no required field is
    missing does it diff field-by-field (`same_value` — numeric-normalized for weight/count,
    text-normalized otherwise) to decide `OK`/`MISMATCH`/`NEEDS_REVIEW`, in that priority order
    (missing attachment → unreadable → wrong doc type → missing value → mismatch → ok).
+   `is_missing` splits its two placeholder kinds deliberately: `BLANK_RUN_RE` (`???`, `___`)
+   matches **anywhere** in the value, since templates pad placeholders with units (`____MT` in
+   `email_517`/`email_518`), while `PLACEHOLDER_RE` (`TBA`, `N/A`, `NIL`, …) must match the
+   **whole** value. Matching the alphabetic ones mid-string reported real names as missing —
+   `AL GURG NA TRADING` contains a standalone `NA` — silently escalating a field that was there.
 5. `run()`/`main()` wire it together: load the `Inbox`, classify all emails in parallel (2
    workers — the free-tier LLM's rate limit), compare `BL_COMPARISON` emails, write
    `submission.json` matching `sample_submission.json`'s shape (every `email_id` present).

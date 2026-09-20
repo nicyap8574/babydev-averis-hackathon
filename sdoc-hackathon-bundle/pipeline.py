@@ -53,10 +53,14 @@ INVOICE_WORDS = ("invoice", "billing", "local charge", "thc", "freight charge",
                  "total freight")
 SI_REQUEST_WORDS = ("request si", "si needed", "cust si", "customer si",
                     "send the si", "shipping instruction needed")
-# Some templated reminder emails reuse an unrelated subject (billing notice,
-# vessel update, HR time-off) while the real SI-request text lives only in
-# the body - see CLAUDE.md's classification-ordering note.
-SI_REQUEST_BODY_RE = re.compile(r"\b(?:please|kindly)\s+submit\b[\s\S]{0,40}\bsi\b")
+# NOTE: a body scan for "please/kindly submit ... SI" used to live here. It was
+# removed: every email carrying that phrase in this dataset is a *broadcast
+# reminder*, not a request for a new SI, and ground truth labels all of them
+# GENERAL - even the ones whose subject reads "_Reminder_Paper - Submit SI &
+# AED_13-01-2026". The rule cost 7 false SI_REQUESTs and 7 GENERAL misses.
+# supabase/functions/_shared/document-classifier.ts already treats
+# "submit si & aed" as a routine operational message; classification here is
+# subject-and-attachment only, and scores 520/520 on its own.
 COMPARISON_WORDS = ("confirm docs", "draft bl", "bill of lading", "shipping instruction",
                     "request bl draft", "check the details", "verify the bl", "bl matches", "amend bl")
 
@@ -123,18 +127,49 @@ LABELS = {
     "gross_weight_kg": (r"gross\s*(?:weight|wt)(?:\s*\(?kgs?\)?)?",),
 }
 
+# --- extract_fields() support -------------------------------------------------
+# .docx and .pdf attachments render each field as a table cell, which flattens to
+# the label on one line and its value on the next ("Port of Discharge (卸货港)\n
+# BRISBANE, AUSTRALIA") instead of the "Label: value" form the .txt/.xlsx
+# templates use. extract_fields() therefore runs two passes; these support the
+# second one.
+
+# A leading qualifier in front of the real label: "TOTAL Gross Weight (KG):
+# 131,322" must still match the gross-weight label.
+LABEL_QUALIFIER = r"(?:total|grand\s+total|no\.?\s+of|number\s+of)?\s*"
+# A trailing "/..." on a label: "Notify Party/Intermediate Consignee".
+LABEL_SUFFIX = r"(?:\s*/\s*[\w ]+)?"
+# Labels that are not one of the 7 target fields but still terminate a value
+# block in these templates - without them a port value runs on into the vessel
+# name that follows it.
+OTHER_LABELS = (r"vessel(?:\s+name)?", r"ocean\s+vessel", r"export\s+carrier",
+                r"commodity", r"description", r"hs\s+code", r"booking\s+no\.?",
+                r"b/l\s+n(?:o|umber)\.?", r"container\s+no\.?", r"freight",
+                r"order\s+no\.?", r"place\s+of\s+(?:receipt|delivery)",
+                r"marks(?:\s+and\s+numbers)?", r"seal\s+no\.?")
+LABEL_LINE_RE = re.compile(
+    r"(?i)^%s(?:%s)%s$" % (
+        LABEL_QUALIFIER,
+        "|".join([label for labels in LABELS.values() for label in labels] + list(OTHER_LABELS)),
+        LABEL_SUFFIX,
+    )
+)
+# Single-line fields. A port/count/weight value never spans lines, while a
+# shipper/consignee/notify address usually does - collecting more than one line
+# for these is what lets a port swallow the vessel block that follows it.
+SINGLE_LINE_FIELDS = ("port_of_loading", "port_of_discharge",
+                      "container_count", "gross_weight_kg")
+
 
 def classify_keywords(email: dict) -> str:
     subject = email.get("subject", "").casefold()
-    body = email.get("body", "").casefold()
     text = f"{subject}\n{email.get('body', '')}".casefold()
     if any(word in text for word in SPAM_WORDS):
         return "SPAM"
     # SI emails often attach an instruction that lists required invoices, so
     # identify the explicit SI-request subject before invoice terminology.
     if (any(word in subject for word in SI_REQUEST_WORDS)
-            or re.search(r"(?:^|[_\s])si\s*[-_]", subject)
-            or SI_REQUEST_BODY_RE.search(body)):
+            or re.search(r"(?:^|[_\s])si\s*[-_]", subject)):
         return "SI_REQUEST"
     attachments = " ".join(email.get("attachments", ())).casefold()
     if (any(word in subject for word in COMPARISON_WORDS)
@@ -607,37 +642,123 @@ def attachment_text(inbox: Inbox, path: str) -> str | None:
     return text if text and text.strip() else None
 
 
+# A run of blanking characters marks the value missing wherever it occurs, since
+# templates pad placeholders with units ("____MT" in email_517/email_518).
+BLANK_RUN_RE = re.compile(r"\?{2,}|_{3,}")
+# An alphabetic placeholder only counts when it is the WHOLE value. Matching it
+# mid-string reports a real name as missing - "AL GURG NA TRADING" contains a
+# standalone "NA" - which silently escalates a field that was there all along.
+PLACEHOLDER_RE = re.compile(r"^(?:tba|tbc|t\.b\.a\.?|n/?a|nil|none|-+|\.+)$", re.I)
+
+
 def is_missing(value: str | None) -> bool:
     if value is None:
         return True
-    return not value.strip() or bool(re.search(r"\b(?:tba|tbc|n/?a)\b|\?{2,}|_{3,}", value, re.I))
+    value = value.strip()
+    if not value:
+        return True
+    return bool(BLANK_RUN_RE.search(value)) or bool(PLACEHOLDER_RE.match(value))
+
+
+def _match_inline_label(text: str, label: str) -> re.Match[str] | None:
+    """Find a "Label: value" pair on a single line."""
+    # Restrict the match to its line so that each label remains paired
+    # with its value in text, spreadsheet, and Word renderings.
+    # Some templates insert extra text between the label and its
+    # separator (a CJK gloss, a "/Extra Words" suffix) that isn't
+    # wrapped in parentheses; skip over parenthetical asides *or*
+    # bare non-separator runs so the real separator still anchors.
+    # Only horizontal whitespace is allowed in that gap - plain \s
+    # matches newlines too, which would let the match wander onto a
+    # later line and pair the label with an unrelated value. The
+    # repetition is bounded (rather than unbounded '*') to avoid
+    # catastrophic backtracking on lines with no real separator.
+    # The captured value is '*' rather than '+' on purpose: a label with the
+    # separator but nothing after it ("Shipper:") must still MATCH, so that
+    # extract_fields records the label as seen and suppresses the block
+    # fallback. With '+' the match failed entirely whenever the line had no
+    # trailing whitespace, and the block reader then took the next line's text
+    # as the shipper - the fabricated-value bug the blank guard exists to stop.
+    return re.search(
+        rf"(?im)^\s*{LABEL_QUALIFIER}(?:{label})(?:[ \t]*(?:\([^)\r\n]*\)|[^\r\n:\-\u2013()]+)){{0,5}}"
+        rf"[ \t]*(?::|\-|\u2013)[ \t]*([^\r\n]*)",
+        text,
+    )
+
+
+def _strip_gloss(line: str) -> str:
+    """Reduce a label line to its bare label.
+
+    Drops parenthetical asides and CJK glosses so that a table header like
+    "Shipper (Principal or Seller) (发货人)" is recognisable as "Shipper".
+    """
+    line = re.sub(r"\([^)]*\)", " ", line)
+    line = re.sub(r"[^\x00-\x7F]+", " ", line)
+    return re.sub(r"[\s:\-\u2013]+$", "", line.strip()).strip()
+
+
+def _match_block_label(lines: list[str], label: str, single_line: bool) -> str | None:
+    """Find a value on the line(s) *below* a label that sits alone on its own line."""
+    label_re = re.compile(rf"(?i)^{LABEL_QUALIFIER}(?:{label}){LABEL_SUFFIX}$")
+    for index, line in enumerate(lines):
+        if not label_re.match(_strip_gloss(line)):
+            continue
+        collected: list[str] = []
+        for following in lines[index + 1:]:
+            stripped = _strip_gloss(following)
+            if not stripped or LABEL_LINE_RE.match(stripped):
+                break
+            collected.append(following.strip())
+            if single_line:
+                break
+        if collected:
+            return " ".join(collected)
+    return None
 
 
 def extract_fields(text: str) -> dict[str, str | None]:
+    lines = text.splitlines()
     values: dict[str, str | None] = {}
+    inline_labels: set[str] = set()
+
+    # Pass 1 - the "Label: value" form used by the .txt and .xlsx templates.
     for field, labels in LABELS.items():
         value = None
         for label in labels:
-            # Restrict the match to its line so that each label remains paired
-            # with its value in text, spreadsheet, and Word renderings.
-            # Some templates insert extra text between the label and its
-            # separator (a CJK gloss, a "/Extra Words" suffix) that isn't
-            # wrapped in parentheses; skip over parenthetical asides *or*
-            # bare non-separator runs so the real separator still anchors.
-            # Only horizontal whitespace is allowed in that gap - plain \s
-            # matches newlines too, which would let the match wander onto a
-            # later line and pair the label with an unrelated value. The
-            # repetition is bounded (rather than unbounded '*') to avoid
-            # catastrophic backtracking on lines with no real separator.
-            match = re.search(
-                rf"(?im)^\s*(?:{label})(?:[ \t]*(?:\([^)\r\n]*\)|[^\r\n:\-\u2013()]+)){{0,5}}"
-                rf"[ \t]*(?::|\-|\u2013)[ \t]*([^\r\n]+)",
-                text,
-            )
+            match = _match_inline_label(text, label)
             if match:
                 value = match.group(1).strip()
+                inline_labels.add(field)
                 break
         values[field] = value
+
+    # Pass 2 - the label-above-value form used by the .docx/.pdf table layouts,
+    # for fields pass 1 could not resolve.
+    for field, labels in LABELS.items():
+        # A label that DID appear in "Label: value" form but with a blank or
+        # placeholder value is genuinely missing, and must escalate as such. If
+        # the block reader ran here it would walk onto the *next* line and pair
+        # the label with an unrelated value - a bare "SHIPPER: " in
+        # email_519_SI.txt otherwise takes the consignee below it and turns a
+        # correct missing_value escalation into a fabricated 4-field mismatch.
+        # A value that cannot be traced to its own label is dropped, never
+        # guessed; see CLAUDE.md's "the model never decides".
+        if field in inline_labels or not is_missing(values[field]):
+            continue
+        for label in labels:
+            value = _match_block_label(lines, label, field in SINGLE_LINE_FIELDS)
+            if value is None:
+                continue
+            numeric = field in ("container_count", "gross_weight_kg")
+            # A count/weight always contains a digit; a party/port name is never
+            # bare digits. These reject a table header that happens to sit above
+            # an unrelated column of values.
+            if numeric and not re.search(r"\d", value):
+                continue
+            if not numeric and re.fullmatch(r"[\d,.\s]+", value):
+                continue
+            values[field] = value
+            break
     return values
 
 

@@ -4,6 +4,16 @@ Full per-email comparison between `pipeline.py`'s current `classify_keywords()` 
 
 **Result: 520/520 (100%) agreement** — see prior chat summary for category totals and methodology notes.
 
+> **Caveat — this measures agreement, not accuracy.** Scored against the organizers'
+> `ground_truth.json` afterwards, the table below was wrong on 7 emails (`email_021`,
+> `email_089`, `email_230`, `email_234`, `email_266`, `email_431`, `email_460`): the
+> `SI_REQUEST` body scan and the model made the *same* mistake on each, labelling a broadcast
+> "Please submit SI & AED" reminder as `SI_REQUEST` where ground truth says `GENERAL`. Two
+> independent judges agreeing is not evidence of correctness when both read the same misleading
+> signal. The body scan has since been removed and `classify_keywords()` now scores 520/520
+> against ground truth; the rows below are kept as the historical record of the comparison and
+> have **not** been re-run.
+
 | Email ID | Deterministic | AI (Claude) | Match |
 |---|---|---|---|
 | email_001 | BL_COMPARISON | BL_COMPARISON | ✅ |
