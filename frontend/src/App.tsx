@@ -6,11 +6,13 @@ import {
   fetchReviewQueue,
   resolveReviewItem,
   createCase,
+  setEmailsArchived,
   type EmailDetail,
   type EmailListItem,
   type ReviewQueueItem,
 } from "./api";
 import { Icon, IconSprite } from "./components/IconSprite";
+import { categoryLabel } from "./components/CategoryPill";
 import { Sidebar } from "./components/Sidebar";
 import { Topbar } from "./components/Topbar";
 import { MetricsRow } from "./components/MetricsRow";
@@ -24,11 +26,14 @@ import { CaseModal } from "./components/CaseModal";
 import { Toast } from "./components/Toast";
 import { GuideView } from "./components/GuideView";
 import { NewCaseModal } from "./components/NewCaseModal";
+import { BatchUploadModal } from "./components/BatchUploadModal";
+import { ingestBundle, type BatchProgress, type BatchResult } from "./lib/batchIngest";
 
 export type View =
   | "dashboard"
   | "inbox"
   | "review"
+  | "archived"
   | "reports"
   | "analytics"
   | "guide"
@@ -39,6 +44,7 @@ type Theme = "light" | "dark";
 const VIEW_META: Record<Exclude<View, "dashboard">, [string, string]> = {
   inbox: ["Inbox", "Every classified email across the shared shipping mailbox."],
   review: ["Review queue", "Cases the pipeline escalated because it could not decide."],
+  archived: ["Archived", "Cases you've removed from the active inbox view."],
   reports: ["Reports", "Completed discrepancy reports and reviewer history."],
   analytics: ["Analytics", "Classification and defect distribution across the run."],
   guide: ["Help & guide", "A walkthrough of DocWise in the order you will use it."],
@@ -65,6 +71,7 @@ function readStored<T extends string>(key: string, fallback: T): T {
 
 function App() {
   const [emails, setEmails] = useState<EmailListItem[]>([]);
+  const [archivedEmails, setArchivedEmails] = useState<EmailListItem[]>([]);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueItem[]>([]);
   const [view, setView] = useState<View>("dashboard");
   const [search, setSearch] = useState("");
@@ -78,6 +85,13 @@ function App() {
   const [newCaseOpen, setNewCaseOpen] = useState(false);
   const [creatingCase, setCreatingCase] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [createNotice, setCreateNotice] = useState<string | null>(null);
+
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
+  const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
+  const [batchError, setBatchError] = useState<string | null>(null);
 
   const [modalEmailId, setModalEmailId] = useState<string | null>(null);
   const [modalKind, setModalKind] = useState<"case" | "report">("case");
@@ -89,9 +103,10 @@ function App() {
   const toastTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    Promise.all([fetchEmails(), fetchReviewQueue()])
-      .then(([emailList, queue]) => {
+    Promise.all([fetchEmails(), fetchEmails({ archived: true }), fetchReviewQueue()])
+      .then(([emailList, archivedList, queue]) => {
         setEmails(emailList);
+        setArchivedEmails(archivedList);
         setReviewQueue(queue);
       })
       .catch((error: Error) => setLoadError(error.message))
@@ -178,6 +193,26 @@ function App() {
     showToast("Review item resolved");
   };
 
+  const handleArchive = async (emailIds: string[], archive: boolean) => {
+    try {
+      await setEmailsArchived(emailIds, archive);
+      const [emailList, archivedList] = await Promise.all([
+        fetchEmails(),
+        fetchEmails({ archived: true }),
+      ]);
+      setEmails(emailList);
+      setArchivedEmails(archivedList);
+      const count = emailIds.length;
+      showToast(
+        archive
+          ? `${count} case${count === 1 ? "" : "s"} archived`
+          : `${count} case${count === 1 ? "" : "s"} restored`,
+      );
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not update the archive.");
+    }
+  };
+
   const [title, subtitle] =
     view === "dashboard"
       ? [greeting(), today()]
@@ -186,19 +221,57 @@ function App() {
   const handleCreateCase = async (input: { subject: string; sender: string; body: string; files: File[] }) => {
     setCreatingCase(true);
     setCreateError(null);
+    setCreateNotice(null);
     try {
-      const id = await createCase(input);
+      const created = await createCase(input);
       const [emailList, queue] = await Promise.all([fetchEmails(), fetchReviewQueue()]);
       setEmails(emailList);
       setReviewQueue(queue);
+      if (created.comparisonError) {
+        setCreateError(`Case created and classified, but the comparison could not run: ${created.comparisonError}`);
+        return;
+      }
+      if (!created.comparisonRun) {
+        // A non-comparison category is a correct outcome, not a failure — but
+        // closing on a success toast would leave no trace of why no SI/BL
+        // verdict appeared.
+        const label = created.category ? categoryLabel(created.category) : "an unrecognised category";
+        setCreateNotice(
+          `Case created and classified as ${label}. SI/BL comparison runs only for BL Comparison emails, so no verdict was produced.`,
+        );
+        return;
+      }
       setNewCaseOpen(false);
-      showToast(`Case ${id.slice(0, 8)} created`);
+      showToast(`Case ${created.emailId.slice(0, 8)} created — comparison complete`);
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : "Could not create the case.");
       // The database insert may have succeeded before a classifier error.
       fetchEmails().then(setEmails).catch(() => undefined);
     } finally {
       setCreatingCase(false);
+    }
+  };
+
+  const handleBatchUpload = async (file: File) => {
+    setBatchRunning(true);
+    setBatchError(null);
+    setBatchResult(null);
+    setBatchProgress(null);
+    try {
+      const result = await ingestBundle(file, setBatchProgress);
+      setBatchResult(result);
+      showToast(`${result.ingested} of ${result.total} cases ingested`);
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : "Could not ingest the bundle.");
+    } finally {
+      setBatchRunning(false);
+      // Rows may have landed even on a partial failure, so refresh either way.
+      Promise.all([fetchEmails(), fetchReviewQueue()])
+        .then(([emailList, queue]) => {
+          setEmails(emailList);
+          setReviewQueue(queue);
+        })
+        .catch(() => undefined);
     }
   };
 
@@ -214,6 +287,7 @@ function App() {
           onToggleCollapse={() => setCollapsed((value) => !value)}
           inboxCount={emails.length}
           reviewCount={pendingReviewCount}
+          archivedCount={archivedEmails.length}
         />
         {sidebarOpen && (
           <button
@@ -229,9 +303,17 @@ function App() {
             subtitle={subtitle}
             search={search}
             onSearchChange={setSearch}
-            searchEnabled={view === "dashboard" || view === "inbox" || view === "reports"}
+            searchEnabled={
+              view === "dashboard" || view === "inbox" || view === "archived" || view === "reports"
+            }
             onMenuClick={() => setSidebarOpen((open) => !open)}
-            onNewCase={() => { setCreateError(null); setNewCaseOpen(true); }}
+            onNewCase={() => { setCreateError(null); setCreateNotice(null); setNewCaseOpen(true); }}
+            onBatchUpload={() => {
+              setBatchError(null);
+              setBatchResult(null);
+              setBatchProgress(null);
+              setBatchOpen(true);
+            }}
           />
 
           {loading && (
@@ -273,7 +355,33 @@ function App() {
 
           {!loading && !loadError && view === "inbox" && (
             <section className="view active">
-              <CaseTable emails={emails} onOpen={openCase} search={search} showFilter paginate pageSize={10} />
+              <CaseTable
+                emails={emails}
+                onOpen={openCase}
+                search={search}
+                showFilter
+                paginate
+                pageSize={10}
+                onArchive={handleArchive}
+              />
+            </section>
+          )}
+
+          {!loading && !loadError && view === "archived" && (
+            <section className="view active">
+              <CaseTable
+                emails={archivedEmails}
+                onOpen={openCase}
+                search={search}
+                showFilter
+                paginate
+                pageSize={10}
+                onArchive={handleArchive}
+                archived
+                heading="Archived cases"
+                description="Cases removed from the active inbox view."
+                emptyMessage="No archived cases yet."
+              />
             </section>
           )}
 
@@ -305,13 +413,28 @@ function App() {
         onClose={closeModal}
       />
 
-      <NewCaseModal
-        open={newCaseOpen}
-        saving={creatingCase}
-        error={createError}
-        onClose={() => setNewCaseOpen(false)}
-        onSubmit={handleCreateCase}
-      />
+      {/* Rendered only while open so each run starts from a blank form —
+          a mounted-but-hidden modal keeps its previous fields and files. */}
+      {newCaseOpen && (
+        <NewCaseModal
+          saving={creatingCase}
+          error={createError}
+          notice={createNotice}
+          onClose={() => setNewCaseOpen(false)}
+          onSubmit={handleCreateCase}
+        />
+      )}
+
+      {batchOpen && (
+        <BatchUploadModal
+          running={batchRunning}
+          progress={batchProgress}
+          result={batchResult}
+          error={batchError}
+          onClose={() => setBatchOpen(false)}
+          onSubmit={handleBatchUpload}
+        />
+      )}
 
       <Toast message={toastMessage} />
     </>

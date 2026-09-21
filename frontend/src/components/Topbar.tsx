@@ -8,6 +8,7 @@ interface TopbarProps {
   searchEnabled: boolean;
   onMenuClick: () => void;
   onNewCase: () => void;
+  onBatchUpload: () => void;
 }
 
 export function Topbar({
@@ -18,6 +19,7 @@ export function Topbar({
   searchEnabled,
   onMenuClick,
   onNewCase,
+  onBatchUpload,
 }: TopbarProps) {
   return (
     <header className="topbar">
@@ -42,9 +44,13 @@ export function Topbar({
             aria-label="Search cases or senders"
           />
         </label>
-        <button className="icon-button" aria-label="Notifications" disabled title="Not available in this build">
-          <Icon id="i-bell" />
-          <span className="notification-dot" />
+        <button
+          className="secondary-button"
+          onClick={onBatchUpload}
+          title="Upload a bundle of cases as a ZIP archive"
+        >
+          <Icon id="i-upload" />
+          <span>Upload batch</span>
         </button>
         <button
           className="primary-button"

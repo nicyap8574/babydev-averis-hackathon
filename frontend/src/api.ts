@@ -1,5 +1,10 @@
 import { supabase } from "./lib/supabase";
 import { SUPABASE_TO_CATEGORY } from "./lib/categories";
+import { contentTypeFor, sanitizeFileName, MAX_ATTACHMENT_BYTES, type AttachmentRecord } from "./lib/attachments";
+
+/** PostgREST truncates at supabase/config.toml's `[api] max_rows` without
+ *  raising, which would silently skew every count derived from these rows. */
+const ROW_LIMIT = 2000;
 
 function requireSupabase() {
   if (!supabase) {
@@ -28,6 +33,7 @@ export interface EmailListItem {
   status: EmailStatus | null;
   mismatch_found: boolean;
   workflow_status: string;
+  archived: boolean;
 }
 
 export interface FieldComparison {
@@ -123,6 +129,15 @@ export async function downloadAttachment(attachment: CaseAttachment): Promise<Bl
   return data;
 }
 
+export interface CaseCreation {
+  emailId: string;
+  category: Category | null;
+  /** False when the classifier did not route this email to SI/BL extraction,
+   *  which is a normal outcome rather than a failure. */
+  comparisonRun: boolean;
+  comparisonError: string | null;
+}
+
 export interface ReviewQueueItem {
   email_id: string;
   subject: string;
@@ -133,11 +148,14 @@ export interface ReviewQueueItem {
 
 // -- Supabase-backed path -----------------------------------------------------
 
-export async function fetchEmails(): Promise<EmailListItem[]> {
+export async function fetchEmails(options?: { archived?: boolean }): Promise<EmailListItem[]> {
   const db = requireSupabase();
+  const archived = options?.archived ?? false;
   const { data, error } = await db
     .from("inbox_records")
-    .select("email_id,subject,sender,created_at,category,status,workflow_status");
+    .select("email_id,subject,sender,created_at,category,status,workflow_status,archived")
+    .eq("archived", archived)
+    .limit(ROW_LIMIT);
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((row) => ({
@@ -149,7 +167,18 @@ export async function fetchEmails(): Promise<EmailListItem[]> {
     status: row.status as EmailStatus | null,
     mismatch_found: row.status === "MISMATCH",
     workflow_status: row.workflow_status as string,
+    archived: Boolean(row.archived),
   }));
+}
+
+export async function setEmailsArchived(emailIds: string[], archived: boolean): Promise<void> {
+  if (emailIds.length === 0) return;
+  const db = requireSupabase();
+  const { error } = await db
+    .from("inbox_records")
+    .update({ archived })
+    .in("email_id", emailIds);
+  if (error) throw new Error(error.message);
 }
 
 export async function createCase(input: {
@@ -157,24 +186,16 @@ export async function createCase(input: {
   sender: string;
   body: string;
   files: File[];
-}): Promise<string> {
+}): Promise<CaseCreation> {
   const db = requireSupabase();
   const emailId = crypto.randomUUID();
-  const attachments: { name: string; content_type: string; size_bytes: number; path: string }[] = [];
-  const allowedTypes: Record<string, string> = {
-    pdf: "application/pdf",
-    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    txt: "text/plain",
-    csv: "text/csv",
-  };
+  const attachments: AttachmentRecord[] = [];
 
   for (const file of input.files) {
-    const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-    const contentType = allowedTypes[extension];
+    const contentType = contentTypeFor(file.name);
     if (!contentType) throw new Error(`${file.name} is not a supported file type.`);
-    if (file.size > 20 * 1024 * 1024) throw new Error(`${file.name} exceeds the 20 MB per-file limit.`);
-    const path = `${emailId}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    if (file.size > MAX_ATTACHMENT_BYTES) throw new Error(`${file.name} exceeds the 20 MB per-file limit.`);
+    const path = `${emailId}/${sanitizeFileName(file.name)}`;
     const { error } = await db.storage.from("case-attachments").upload(path, file, {
       contentType,
       upsert: false,
@@ -183,40 +204,51 @@ export async function createCase(input: {
     attachments.push({ name: file.name, content_type: contentType, size_bytes: file.size, path });
   }
 
-  const { error: insertError } = await db.from("inbox_records").insert({
-    email_id: emailId,
-    sender: input.sender,
-    subject: input.subject,
-    body: input.body,
-    attachments,
-    metadata: { source: "web_form" },
-  });
-  if (insertError) {
-    await db.storage.from("case-attachments").remove(attachments.map((attachment) => attachment.path));
-    throw new Error(`Could not save the case: ${insertError.message}`);
-  }
-
-  const { error: classifyError } = await db.functions.invoke("identify-document-request", {
-    body: { email_id: emailId, from: input.sender, subject: input.subject, body: input.body, attachments },
+  // The Edge Function upserts the record itself with server-side credentials,
+  // so there is no separate client insert to keep in step with it.
+  const { data, error: classifyError } = await db.functions.invoke("identify-document-request", {
+    body: {
+      email_id: emailId,
+      from: input.sender,
+      subject: input.subject,
+      body: input.body,
+      attachments,
+      metadata: { source: "web_form" },
+    },
   });
   if (classifyError) {
-    throw new Error(`Case saved, but classification failed: ${classifyError.message}. The saved case remains in the inbox.`);
+    throw new Error(`Could not classify the case: ${classifyError.message}`);
+  }
+
+  const decision = data as { category?: string; continue_to_extraction?: boolean } | null;
+  const category = SUPABASE_TO_CATEGORY[decision?.category ?? ""] ?? null;
+
+  if (!decision?.continue_to_extraction) {
+    return { emailId, category, comparisonRun: false, comparisonError: null };
   }
 
   // The comparison service re-reads the saved record and its private Storage
-  // attachments using server-side credentials. It is safe to call for every
-  // case: non-comparison categories return immediately.
-  const comparisonResponse = await fetch("/api/compare", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email_id: emailId }),
-  });
-  if (!comparisonResponse.ok) {
-    const failure = await comparisonResponse.json().catch(() => null) as { error?: unknown } | null;
-    const message = typeof failure?.error === "string" ? failure.error : "The document comparison service could not complete.";
-    throw new Error(`Case saved and classified, but comparison failed: ${message}`);
+  // attachments using server-side credentials.
+  try {
+    const response = await fetch("/api/compare", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email_id: emailId }),
+    });
+    if (!response.ok) {
+      const failure = (await response.json().catch(() => null)) as { error?: unknown } | null;
+      throw new Error(typeof failure?.error === "string" ? failure.error : `The comparison service returned ${response.status}.`);
+    }
+  } catch (error) {
+    // The case is classified and in the inbox; only its verdict is missing.
+    return {
+      emailId,
+      category,
+      comparisonRun: true,
+      comparisonError: error instanceof Error ? error.message : "The comparison service is unreachable.",
+    };
   }
-  return emailId;
+  return { emailId, category, comparisonRun: true, comparisonError: null };
 }
 
 export async function fetchEmailDetail(emailId: string): Promise<EmailDetail> {

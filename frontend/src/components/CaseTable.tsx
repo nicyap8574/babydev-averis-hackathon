@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { Category, EmailListItem, EmailStatus } from "../api";
 import { CategoryPill, categoryLabel } from "./CategoryPill";
 import { Select, MultiSelect } from "./Select";
+import { Icon } from "./IconSprite";
 
 interface CaseTableProps {
   emails: EmailListItem[];
@@ -11,6 +12,13 @@ interface CaseTableProps {
   paginate?: boolean;
   pageSize?: number;
   onViewMore?: () => void;
+  /** Present only on tables that support archiving; omit to keep a table read-only. */
+  onArchive?: (emailIds: string[], archived: boolean) => void;
+  /** True when `emails` are already-archived cases, so actions restore instead of archive. */
+  archived?: boolean;
+  heading?: string;
+  description?: string;
+  emptyMessage?: string;
 }
 
 const STATUS_STYLE: Record<EmailStatus, { className: string; label: string }> = {
@@ -35,11 +43,32 @@ function formatTimestamp(value: string): string {
   });
 }
 
-export function CaseTable({ emails, onOpen, search, showFilter = false, paginate = false, pageSize = 8, onViewMore }: CaseTableProps) {
+export function CaseTable({
+  emails,
+  onOpen,
+  search,
+  showFilter = false,
+  paginate = false,
+  pageSize = 8,
+  onViewMore,
+  onArchive,
+  archived = false,
+  heading,
+  description = "Document checks received across your shared inbox",
+  emptyMessage,
+}: CaseTableProps) {
   const [filter, setFilter] = useState<"all" | "mismatch" | "review">("all");
   const [categoryFilters, setCategoryFilters] = useState<Category[]>([]);
   const [timestampSort, setTimestampSort] = useState<TimestampSort>("descending");
   const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Ids for cases removed from `emails` (e.g. just archived elsewhere) fall out
+  // here instead of lingering as a phantom selection count.
+  const selected = useMemo(() => {
+    const ids = new Set(emails.map((email) => email.id));
+    return new Set([...selectedIds].filter((id) => ids.has(id)));
+  }, [selectedIds, emails]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -74,14 +103,56 @@ export function CaseTable({ emails, onOpen, search, showFilter = false, paginate
     setPage(1);
   };
 
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allVisibleSelected = visible.length > 0 && visible.every((email) => selected.has(email.id));
+  const toggleAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) visible.forEach((email) => next.delete(email.id));
+      else visible.forEach((email) => next.add(email.id));
+      return next;
+    });
+  };
+
+  const handleBulkArchive = () => {
+    if (!onArchive || selected.size === 0) return;
+    onArchive(Array.from(selected), !archived);
+    setSelectedIds(new Set());
+  };
+
+  const actionLabel = archived ? "Restore" : "Archive";
+
   return (
     <section className="panel">
       <div className="panel-head">
         <div className="panel-title">
-          <h2>{paginate ? "All cases" : "Recent cases"}</h2>
-          <p>Document checks received across your shared inbox</p>
+          <h2>{heading ?? (paginate ? "All cases" : "Recent cases")}</h2>
+          <p>{description}</p>
         </div>
         <div className="panel-head-controls">
+          {onArchive && selected.size > 0 && (
+            // Inline, in the same row as the filters, so selecting rows never
+            // shifts the table down — a separate full-width bar used to do
+            // exactly that.
+            <div className="selection-chip">
+              <span>{selected.size} selected</span>
+              <button className="text-button" onClick={() => setSelectedIds(new Set())}>
+                Clear
+              </button>
+              <button className="secondary-button selection-chip-action" onClick={handleBulkArchive}>
+                <Icon id={archived ? "i-refresh" : "i-archive"} />
+                {actionLabel}
+              </button>
+            </div>
+          )}
           {showFilter && (
             <>
               <Select
@@ -112,13 +183,23 @@ export function CaseTable({ emails, onOpen, search, showFilter = false, paginate
         </div>
       </div>
       <div className="table-scroll">
-        <table className="case-table">
+        <table className={`case-table${onArchive ? " selectable" : ""}`}>
           <thead>
             <tr>
-              <th>Sender / subject</th>
-              <th>Case ID</th>
-              <th>Category</th>
-              <th>Status</th>
+              {onArchive && (
+                <th className="col-select">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleAllVisible}
+                    aria-label="Select all visible cases"
+                  />
+                </th>
+              )}
+              <th className="col-sender">Sender / subject</th>
+              <th className="col-id">Case ID</th>
+              <th className="col-category">Category</th>
+              <th className="col-status">Status</th>
               <th>
                 <button
                   type="button"
@@ -130,6 +211,7 @@ export function CaseTable({ emails, onOpen, search, showFilter = false, paginate
                   Received <span aria-hidden="true" className="sort-indicator">{timestampSort === "ascending" ? "↑" : "↓"}</span>
                 </button>
               </th>
+              {onArchive && <th className="col-actions" />}
             </tr>
           </thead>
           <tbody>
@@ -145,7 +227,17 @@ export function CaseTable({ emails, onOpen, search, showFilter = false, paginate
                       : { className: "muted", label: "Not compared" };
               return (
                 <tr key={email.id} onClick={() => onOpen(email.id)}>
-                  <td>
+                  {onArchive && (
+                    <td className="col-select" onClick={(event) => event.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(email.id)}
+                        onChange={() => toggleOne(email.id)}
+                        aria-label={`Select case ${email.id}`}
+                      />
+                    </td>
+                  )}
+                  <td className="col-sender">
                     <div className="sender">
                       <div className="sender-text">
                         <strong>{email.from}</strong>
@@ -165,13 +257,27 @@ export function CaseTable({ emails, onOpen, search, showFilter = false, paginate
                   <td className="case-timestamp">
                     <time dateTime={email.created_at}>{formatTimestamp(email.created_at)}</time>
                   </td>
+                  {onArchive && (
+                    <td className="col-actions" onClick={(event) => event.stopPropagation()}>
+                      <button
+                        className="row-action-btn"
+                        title={`${actionLabel} case`}
+                        aria-label={`${actionLabel} case ${email.id}`}
+                        onClick={() => onArchive([email.id], !archived)}
+                      >
+                        <Icon id={archived ? "i-refresh" : "i-archive"} />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: "28px" }}>
-                  {emails.length === 0 ? "No cases yet. Select New case to get started." : "No cases match your search."}
+                <td colSpan={onArchive ? 7 : 5} style={{ textAlign: "center", color: "var(--muted)", padding: "28px" }}>
+                  {emails.length === 0
+                    ? (emptyMessage ?? "No cases yet. Select New case to get started.")
+                    : "No cases match your search."}
                 </td>
               </tr>
             )}

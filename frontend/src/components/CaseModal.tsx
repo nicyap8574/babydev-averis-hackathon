@@ -111,6 +111,10 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
             </div>
           </div>
           <div className="modal-actions">
+            <button className="secondary-button not-implemented" disabled title="Not available in this build">
+              <Icon id="i-clock" />
+              Audit trail
+            </button>
             <button className="primary-button" disabled={!detail || loading} onClick={exportReport}>
               <Icon id="i-file" />
               <span>Export report</span>

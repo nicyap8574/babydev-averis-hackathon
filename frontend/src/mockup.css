@@ -160,7 +160,7 @@ svg { display: block; }
 .brand-mark {
   flex: 0 0 auto; width: 40px; height: 40px; border-radius: var(--radius-md);
   display: grid; place-items: center; padding: 3px;
-  background: #fff; box-shadow: 0 2px 8px rgba(15, 23, 42, .12);
+  background: #fff;
 }
 .brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .brand-copy { min-width: 0; flex: 1; }
@@ -272,8 +272,6 @@ h1 {
 }
 .search input::placeholder { color: var(--muted-2); }
 .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
-.search input:disabled { cursor: not-allowed; }
-
 .icon-button, .primary-button, .secondary-button, .text-button { border: 0; cursor: pointer; transition: .16s ease; }
 .icon-button {
   position: relative; width: 40px; height: 40px; border-radius: var(--radius-md);
@@ -282,17 +280,13 @@ h1 {
 }
 .icon-button:hover { color: var(--ink); border-color: var(--line-strong); box-shadow: var(--shadow-sm); }
 .icon-button svg { width: 18px; height: 18px; }
-.notification-dot {
-  position: absolute; right: 9px; top: 9px; width: 8px; height: 8px;
-  border: 2px solid var(--surface); border-radius: 50%; background: var(--red);
-}
 .primary-button, .secondary-button {
   min-height: 40px; border-radius: var(--radius-md); padding: 0 15px;
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   font-size: 13px; font-weight: 600; white-space: nowrap;
 }
-.primary-button { background: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-ring); }
-.primary-button:hover { background: var(--accent-hover); box-shadow: var(--shadow-md); }
+.primary-button { background: var(--accent); color: #fff; }
+.primary-button:hover { background: var(--accent-hover); }
 .primary-button svg, .secondary-button svg { width: 16px; height: 16px; }
 .secondary-button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .secondary-button:hover { border-color: var(--line-strong); background: var(--surface-soft); }
@@ -302,9 +296,10 @@ h1 {
 }
 .text-button:hover:not([disabled]) { color: var(--accent-hover); text-decoration: underline; }
 
-button[disabled], .icon-button[disabled], .primary-button[disabled], .secondary-button[disabled], .text-button[disabled] {
-  cursor: not-allowed;
-}
+/* "not-allowed" is reserved for controls whose feature does not exist yet.
+   A button that is merely busy or momentarily inapplicable keeps the default
+   cursor, so the two states stay distinguishable. */
+.not-implemented[disabled] { cursor: not-allowed; }
 button[disabled]:hover { box-shadow: none; border-color: var(--line); text-decoration: none; }
 .primary-button[disabled]:hover { background: var(--accent); }
 .secondary-button[disabled]:hover { background: var(--surface); }
@@ -368,11 +363,60 @@ button[disabled]:hover { box-shadow: none; border-color: var(--line); text-decor
 .table-scroll { overflow-x: auto; }
 .case-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 /* fixed widths: the columns must not resize as the category filter changes */
-.case-table th:nth-child(1) { width: 34%; }
-.case-table th:nth-child(2) { width: 14%; }
-.case-table th:nth-child(3) { width: 16%; }
-.case-table th:nth-child(4) { width: 16%; }
-.case-table th:nth-child(5) { width: 20%; }
+.case-table:not(.selectable) th:nth-child(1) { width: 34%; }
+.case-table:not(.selectable) th:nth-child(2) { width: 14%; }
+.case-table:not(.selectable) th:nth-child(3) { width: 16%; }
+.case-table:not(.selectable) th:nth-child(4) { width: 16%; }
+.case-table:not(.selectable) th:nth-child(5) { width: 20%; }
+/* table-layout:fixed proportionally stretches every column - including
+   pixel-width ones - to fill the table whenever the declared widths don't
+   sum to 100%. These seven therefore always add up to exactly 100% so no
+   column is inflated beyond what its own width says, and the checkbox cell
+   can use small, balanced, genuinely-minimal padding on both sides instead
+   of having to hide unwanted leftover space against one edge. */
+.case-table.selectable th.col-select, .case-table.selectable td.col-select { width: 4%; }
+.case-table.selectable th.col-sender { width: 34%; }
+.case-table.selectable th.col-id { width: 12%; }
+.case-table.selectable th.col-category { width: 14%; }
+.case-table.selectable th.col-status { width: 14%; }
+.case-table.selectable th:nth-child(6) { width: 16%; }
+.case-table.selectable th.col-actions, .case-table.selectable td.col-actions { width: 6%; }
+.case-table td.col-select, .case-table td.col-actions { cursor: default; }
+.case-table.selectable th.col-select, .case-table.selectable td.col-select { padding-left: 0; padding-right: 0; text-align: center; }
+.case-table.selectable th.col-sender, .case-table.selectable td.col-sender { padding-left: 10px; }
+
+.case-table input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; margin: 0;
+  width: 18px; height: 18px; border-radius: 5px;
+  border: 1.5px solid var(--line-strong); background: var(--surface);
+  display: inline-grid; place-content: center; cursor: pointer;
+  transition: background .14s ease, border-color .14s ease;
+}
+.case-table input[type="checkbox"]:hover { border-color: var(--accent); }
+.case-table input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.case-table input[type="checkbox"]:checked {
+  background-color: var(--accent); border-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: center; background-size: 11px 11px;
+}
+.row-action-btn {
+  width: 30px; height: 30px; border-radius: var(--radius-sm); display: grid; place-items: center;
+  background: transparent; border: 1px solid transparent; color: var(--muted); cursor: pointer; transition: .14s ease;
+}
+.row-action-btn:hover { color: var(--ink); background: var(--surface-soft); border-color: var(--line); }
+.row-action-btn svg { width: 16px; height: 16px; }
+/* Sits inline with the status/category filters instead of a full-width bar,
+   so selecting rows never pushes the table down. */
+.selection-chip {
+  display: inline-flex; align-items: center; gap: 10px;
+  height: 38px; padding: 0 12px 0 14px;
+  border: 1px solid var(--accent); border-radius: var(--radius-md);
+  background: var(--accent-soft); color: var(--ink); font-size: 12.5px; font-weight: 650;
+  white-space: nowrap;
+}
+.selection-chip .text-button { padding: 0; font-size: 12px; }
+.selection-chip-action { min-height: 28px; padding: 0 10px; gap: 6px; font-size: 11.5px; }
+.selection-chip-action svg { width: 13px; height: 13px; }
 .case-table th {
   padding: 11px 20px; background: var(--surface-soft); color: var(--muted);
   font-size: 11px; font-weight: 650; text-align: left; letter-spacing: .05em; text-transform: uppercase;
@@ -427,7 +471,6 @@ button[disabled]:hover { box-shadow: none; border-color: var(--line); text-decor
 }
 .page:hover:not([disabled]):not(.active) { border-color: var(--line-strong); background: var(--surface-soft); }
 .page.active { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 650; }
-.page[disabled] { cursor: not-allowed; }
 
 /* ---------------------------------------------------- empty-state panel -- */
 
@@ -459,6 +502,15 @@ button[disabled]:hover { box-shadow: none; border-color: var(--line); text-decor
 .file-picker:focus-within .file-picker-button { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
 .file-picker-status { overflow: hidden; color: var(--muted); font-size: 12px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
 .new-case-fields ul { margin: -6px 0 0; padding-left: 20px; color: var(--muted); font-size: 12px; }
+/* Two aligned columns — name, then its Remove — rather than one ragged run. */
+.new-case-fields ul.picked-files {
+  padding-left: 0; list-style: none;
+  display: inline-grid; grid-template-columns: auto auto;
+  gap: 4px 12px; align-items: center; justify-content: start;
+}
+.picked-files li { display: contents; }
+.picked-files li span { min-width: 0; max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picked-files .text-button { flex: none; padding: 0; font-size: 11.5px; font-weight: 400; }
 .new-case-fields .muted { color: var(--muted); font-weight: 400; }
 .new-case-footer { display: flex; justify-content: flex-end; gap: 9px; padding: 16px 24px; border-top: 1px solid var(--line); }
 .case-attachments { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); font-size: 11px; }
@@ -484,6 +536,25 @@ button[disabled]:hover { box-shadow: none; border-color: var(--line); text-decor
 .attachment-preview-button svg { flex: none; width: 13px; height: 13px; }
 .form-error { display: flex; gap: 8px; color: var(--red); font-size: 12px; }
 .form-error svg { flex: none; width: 16px; height: 16px; }
+/* A correct outcome worth reading, not a failure — informational, not red. */
+.form-notice {
+  display: flex; gap: 8px; margin: 0; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface-soft); color: var(--ink); font-size: 12px; line-height: 1.6;
+}
+.form-notice svg { flex: none; width: 16px; height: 16px; margin-top: 1px; color: var(--accent); }
+.sample-link { justify-self: start; padding: 0; font-size: 12px; }
+
+.batch-progress { display: grid; gap: 8px; }
+.batch-progress-row { display: flex; justify-content: space-between; gap: 12px; color: var(--ink); font-size: 12px; font-weight: 650; }
+.batch-progress-row .muted { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.batch-progress-track { height: 6px; border-radius: 999px; background: var(--surface-soft); overflow: hidden; }
+.batch-progress-bar { height: 100%; border-radius: 999px; background: var(--accent); transition: width .2s ease; }
+.batch-summary { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ink); font-size: 12px; font-weight: 650; }
+.batch-summary svg { flex: none; width: 16px; height: 16px; color: var(--accent); }
+.batch-issues { display: grid; gap: 8px; justify-items: start; }
+.batch-issue-list { max-height: 180px; margin: 0; padding-left: 18px; overflow-y: auto; color: var(--muted); font-size: 11.5px; line-height: 1.7; }
+.batch-issue-list strong { color: var(--ink); font-weight: 650; }
 
 .unavailable-panel {
   flex: 1; padding: 36px 24px; display: flex; flex-direction: column;
@@ -745,7 +816,6 @@ button[disabled]:hover { box-shadow: none; border-color: var(--line); text-decor
   background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s ease;
 }
 .resolve-button:hover:not(:disabled) { background: var(--accent-hover); }
-.resolve-button:disabled { cursor: not-allowed; }
 .resolution-note { color: var(--muted); font-size: 12.5px; line-height: 1.55; }
 
 /* ----------------------------------------------------------- responsive -- */
@@ -952,7 +1022,7 @@ button[disabled]:hover { box-shadow: none; border-color: var(--line); text-decor
   cursor: pointer; box-shadow: var(--shadow-sm); transition: .15s ease;
 }
 .guide-arrow:hover:not([disabled]) { color: var(--accent); border-color: var(--accent); }
-.guide-arrow[disabled] { opacity: .4; cursor: not-allowed; }
+.guide-arrow[disabled] { opacity: .4; }
 .guide-arrow svg { width: 15px; height: 15px; }
 .guide-arrow:first-child svg { transform: rotate(180deg); }  /* back — points up */
 .guide-arrow:last-child svg { transform: rotate(0deg); }  /* next — points down */

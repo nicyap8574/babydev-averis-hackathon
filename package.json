@@ -3,12 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/document-classifier.test.ts tests/case-report.test.ts",
+    "test": "node --test tests/*.test.ts",
     "evaluate:classifier": "node scripts/evaluate-classifier.mjs",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
+    "fflate": "^0.8.3",
     "typescript": "5.9.2"
   }
 }
