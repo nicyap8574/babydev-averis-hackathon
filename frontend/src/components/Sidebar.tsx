@@ -9,12 +9,14 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   inboxCount: number;
   reviewCount: number;
+  archivedCount: number;
 }
 
-const NAV_ITEMS: { view: View; icon: string; label: string; count?: "inbox" | "review" }[] = [
+const NAV_ITEMS: { view: View; icon: string; label: string; count?: "inbox" | "review" | "archived" }[] = [
   { view: "dashboard", icon: "i-grid", label: "Overview" },
   { view: "inbox", icon: "i-inbox", label: "Inbox", count: "inbox" },
   { view: "review", icon: "i-review", label: "Review queue", count: "review" },
+  { view: "archived", icon: "i-archive", label: "Archived", count: "archived" },
   { view: "reports", icon: "i-file", label: "Reports" },
   { view: "analytics", icon: "i-chart", label: "Analytics" },
 ];
@@ -27,10 +29,11 @@ export function Sidebar({
   onToggleCollapse,
   inboxCount,
   reviewCount,
+  archivedCount,
 }: SidebarProps) {
-  const counts = { inbox: inboxCount, review: reviewCount };
+  const counts = { inbox: inboxCount, review: reviewCount, archived: archivedCount };
 
-  const renderItem = (item: { view: View; icon: string; label: string; count?: "inbox" | "review" }) => (
+  const renderItem = (item: { view: View; icon: string; label: string; count?: "inbox" | "review" | "archived" }) => (
     <button
       key={item.view}
       className={`nav-item${view === item.view ? " active" : ""}`}
