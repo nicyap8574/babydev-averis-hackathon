@@ -23,6 +23,7 @@ export interface EmailListItem {
   id: string;
   subject: string;
   from: string;
+  created_at: string;
   classification: Category;
   status: EmailStatus | null;
   mismatch_found: boolean;
@@ -37,6 +38,13 @@ export interface FieldComparison {
   status: "match" | "mismatch";
 }
 
+export interface CaseAttachment {
+  name: string;
+  path: string;
+  content_type: string | null;
+  size_bytes: number | null;
+}
+
 export interface EmailDetail {
   id: string;
   subject: string;
@@ -45,10 +53,74 @@ export interface EmailDetail {
   status: EmailStatus | null;
   workflow_status: string;
   last_error: string | null;
-  attachment_names: string[];
+  attachments: CaseAttachment[];
   review_reason: string | null;
   fields: FieldComparison[];
   mismatches: string[];
+  review_history?: ReviewHistoryItem[];
+  report_type?: "automated_mismatch" | "reviewed_escalation";
+  completed_at?: string;
+}
+
+export interface ReviewHistoryItem {
+  id: string;
+  resolution: string;
+  created_at: string;
+  reviewer_label: "Human reviewer";
+}
+
+export interface ReportListItem {
+  email_id: string;
+  subject: string;
+  sender: string;
+  report_type: "automated_mismatch" | "reviewed_escalation";
+  verdict: "MISMATCH" | "RESOLVED_AFTER_REVIEW";
+  mismatch_count: number;
+  completed_at: string;
+  latest_resolution: string | null;
+}
+
+export interface ReportPage {
+  items: ReportListItem[];
+  total: number;
+}
+
+function attachmentFromRecord(attachment: unknown): CaseAttachment {
+  if (typeof attachment === "string") {
+    return {
+      name: attachment.split("/").pop() ?? attachment,
+      path: attachment,
+      content_type: null,
+      size_bytes: null,
+    };
+  }
+  if (typeof attachment === "object" && attachment !== null && "path" in attachment) {
+    const value = attachment as Record<string, unknown>;
+    const path = typeof value.path === "string" ? value.path : "";
+    return {
+      name: typeof value.name === "string" ? value.name : path.split("/").pop() ?? "Attachment",
+      path,
+      content_type: typeof value.content_type === "string" ? value.content_type : null,
+      size_bytes: typeof value.size_bytes === "number" ? value.size_bytes : null,
+    };
+  }
+  return { name: "Attachment", path: "", content_type: null, size_bytes: null };
+}
+
+export async function createAttachmentSignedUrl(attachment: CaseAttachment): Promise<string> {
+  if (!attachment.path) throw new Error("This attachment has no storage path.");
+  const db = requireSupabase();
+  const { data, error } = await db.storage.from("case-attachments").createSignedUrl(attachment.path, 600);
+  if (error || !data?.signedUrl) throw new Error(error?.message ?? "Could not open this attachment.");
+  return data.signedUrl;
+}
+
+export async function downloadAttachment(attachment: CaseAttachment): Promise<Blob> {
+  if (!attachment.path) throw new Error("This attachment has no storage path.");
+  const db = requireSupabase();
+  const { data, error } = await db.storage.from("case-attachments").download(attachment.path);
+  if (error || !data) throw new Error(error?.message ?? "Could not download this attachment.");
+  return data;
 }
 
 export interface ReviewQueueItem {
@@ -65,13 +137,14 @@ export async function fetchEmails(): Promise<EmailListItem[]> {
   const db = requireSupabase();
   const { data, error } = await db
     .from("inbox_records")
-    .select("email_id,subject,sender,category,status,workflow_status");
+    .select("email_id,subject,sender,created_at,category,status,workflow_status");
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((row) => ({
     id: row.email_id as string,
     subject: (row.subject as string) ?? "",
     from: (row.sender as string) ?? "",
+    created_at: (row.created_at as string) ?? "",
     classification: SUPABASE_TO_CATEGORY[row.category as string] ?? "GENERAL",
     status: row.status as EmailStatus | null,
     mismatch_found: row.status === "MISMATCH",
@@ -164,16 +237,97 @@ export async function fetchEmailDetail(emailId: string): Promise<EmailDetail> {
     status: data.status as EmailStatus | null,
     workflow_status: data.workflow_status as string,
     last_error: data.last_error as string | null,
-    attachment_names: ((data.attachments as unknown[]) ?? []).map((attachment) =>
-      typeof attachment === "string"
-        ? attachment.split("/").pop() ?? attachment
-        : typeof attachment === "object" && attachment !== null && "name" in attachment
-          ? String(attachment.name)
-          : "Attachment",
-    ),
+    attachments: ((data.attachments as unknown[]) ?? []).map(attachmentFromRecord).filter((attachment) => Boolean(attachment.path)),
     review_reason: (data.review_reason as string | null) ?? null,
     fields: (data.field_comparison as FieldComparison[] | null) ?? [],
     mismatches: [...((data.defect_fields as string[] | null) ?? [])].sort(),
+  };
+}
+
+export async function fetchReports(options: { search?: string; page?: number; pageSize?: number; completedAtAscending?: boolean } = {}): Promise<ReportPage> {
+  const db = requireSupabase();
+  const page = Math.max(1, options.page ?? 1);
+  const pageSize = Math.min(50, Math.max(1, options.pageSize ?? 12));
+  let query = db
+    .from("verification_reports")
+    .select("email_id,subject,sender,report_type,verdict,mismatches,completed_at", { count: "exact" })
+    .order("completed_at", { ascending: options.completedAtAscending ?? false })
+    .range((page - 1) * pageSize, page * pageSize - 1);
+
+  const search = options.search?.trim();
+  if (search) {
+    // PostgREST's `or` syntax treats commas and parentheses as operators.
+    const safeSearch = search.replace(/[%,()]/g, "");
+    if (safeSearch) query = query.or(`sender.ilike.%${safeSearch}%,subject.ilike.%${safeSearch}%`);
+  }
+
+  const { data, error, count } = await query;
+  if (error) throw new Error(error.message);
+
+  const rows = data ?? [];
+  const ids = rows.map((row) => row.email_id as string);
+  const { data: resolutions, error: resolutionError } = ids.length === 0
+    ? { data: [], error: null }
+    : await db.from("review_resolutions").select("email_id,resolution,created_at").in("email_id", ids).order("created_at", { ascending: false });
+  if (resolutionError) throw new Error(resolutionError.message);
+
+  const latestResolution = new Map<string, string>();
+  for (const resolution of resolutions ?? []) {
+    const emailId = resolution.email_id as string;
+    if (!latestResolution.has(emailId)) latestResolution.set(emailId, resolution.resolution as string);
+  }
+
+  return {
+    total: count ?? 0,
+    items: rows.map((row) => ({
+      email_id: row.email_id as string,
+      subject: (row.subject as string) ?? "",
+      sender: (row.sender as string) ?? "",
+      report_type: row.report_type as ReportListItem["report_type"],
+      verdict: row.verdict as ReportListItem["verdict"],
+      mismatch_count: ((row.mismatches as string[] | null) ?? []).length,
+      completed_at: row.completed_at as string,
+      latest_resolution: latestResolution.get(row.email_id as string) ?? null,
+    })),
+  };
+}
+
+export async function fetchReportDetail(emailId: string): Promise<EmailDetail> {
+  const db = requireSupabase();
+  const [{ data: report, error: reportError }, { data: history, error: historyError }] = await Promise.all([
+    db.from("verification_reports")
+      .select("email_id,subject,sender,report_type,status,review_reason,mismatches,field_comparison,attachments,completed_at")
+      .eq("email_id", emailId)
+      .single(),
+    db.from("review_resolutions")
+      .select("id,resolution,created_at")
+      .eq("email_id", emailId)
+      .order("created_at", { ascending: true }),
+  ]);
+  if (reportError) throw new Error(reportError.message);
+  if (historyError) throw new Error(historyError.message);
+  if (!report) throw new Error(`Report not found: ${emailId}`);
+
+  return {
+    id: report.email_id as string,
+    subject: (report.subject as string) ?? "",
+    from: (report.sender as string) ?? "",
+    category: "BL_COMPARISON",
+    status: (report.status as EmailStatus | null) ?? "MISMATCH",
+    workflow_status: "report_completed",
+    last_error: null,
+    attachments: ((report.attachments as unknown[]) ?? []).map(attachmentFromRecord).filter((attachment) => Boolean(attachment.path)),
+    review_reason: (report.review_reason as string | null) ?? null,
+    fields: (report.field_comparison as FieldComparison[] | null) ?? [],
+    mismatches: [...((report.mismatches as string[] | null) ?? [])].sort(),
+    report_type: report.report_type as EmailDetail["report_type"],
+    completed_at: report.completed_at as string,
+    review_history: (history ?? []).map((item) => ({
+      id: item.id as string,
+      resolution: item.resolution as string,
+      created_at: item.created_at as string,
+      reviewer_label: "Human reviewer",
+    })),
   };
 }
 
@@ -225,16 +379,11 @@ export async function resolveReviewItem(
 ): Promise<ReviewQueueItem[]> {
   const db = requireSupabase();
 
-  const { error: updateError } = await db
-    .from("review_queue_items")
-    .update({ resolved: true, resolution, resolved_at: new Date().toISOString() })
-    .eq("email_id", emailId);
-  if (updateError) throw new Error(updateError.message);
-
-  const { error: insertError } = await db
-    .from("review_resolutions")
-    .insert({ email_id: emailId, resolution });
-  if (insertError) throw new Error(insertError.message);
+  const { error } = await db.rpc("resolve_review_item", {
+    p_email_id: emailId,
+    p_resolution: resolution,
+  });
+  if (error) throw new Error(error.message);
 
   return fetchReviewQueue();
 }
