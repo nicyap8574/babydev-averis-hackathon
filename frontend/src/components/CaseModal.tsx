@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { Icon } from "./IconSprite";
-import type { EmailDetail } from "../api";
+import type { CaseAttachment, EmailDetail } from "../api";
+import { AttachmentPreviewModal } from "./AttachmentPreviewModal";
+import { printCaseReport } from "../lib/caseReport";
 
 interface CaseModalProps {
   open: boolean;
@@ -33,6 +35,8 @@ function flash(node: HTMLElement | null) {
 
 export function CaseModal({ open, detail, loading, error, onClose }: CaseModalProps) {
   const [docTab, setDocTab] = useState<"si" | "bl">("bl");
+  const [previewAttachment, setPreviewAttachment] = useState<CaseAttachment | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const paperRefs = useRef<Record<string, HTMLElement | null>>({});
 
   if (!open) return null;
@@ -44,6 +48,8 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
 
   const verdictClass = !detail
     ? ""
+    : detail.report_type === "reviewed_escalation"
+      ? "clear"
     : !isComparison
       ? "muted"
       : detail.status === "OK"
@@ -53,6 +59,8 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
           : "";
   const verdictText = !detail
     ? ""
+    : detail.report_type === "reviewed_escalation"
+      ? "Resolved after review"
     : isComparison && !detail.status
       ? "Waiting for document comparison"
     : !isComparison
@@ -64,6 +72,8 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
           : `${mismatchCount} mismatch${mismatchCount === 1 ? "" : "es"} detected`;
   const headline = !detail
     ? ""
+    : detail.report_type === "reviewed_escalation"
+      ? "Human review completed"
     : detail.workflow_status === "classification_failed"
       ? "Classification could not complete"
     : isComparison && !detail.status
@@ -74,14 +84,25 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
         ? "Documents match"
         : detail.status === "NEEDS_REVIEW"
           ? "Comparison could not be completed"
-          : "Booking documents require attention";
+        : "Booking documents require attention";
+
+  const closeCase = () => {
+    setPreviewAttachment(null);
+    setExportError(null);
+    onClose();
+  };
+
+  const exportReport = () => {
+    if (!detail) return;
+    setExportError(printCaseReport(detail) ? null : "Your browser blocked the report window. Allow popups and try again.");
+  };
 
   return (
-    <div className="modal-backdrop open" role="dialog" aria-modal="true" aria-label="Case details" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="modal-backdrop open" role="dialog" aria-modal="true" aria-label="Case details" onClick={(e) => { if (e.target === e.currentTarget) closeCase(); }}>
       <div className="modal">
         <header className="modal-header">
           <div className="modal-title-row">
-            <button className="back-button" onClick={onClose} aria-label="Close case">
+            <button className="back-button" onClick={closeCase} aria-label="Close case">
               <Icon id="i-arrow" />
             </button>
             <div>
@@ -94,7 +115,7 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
               <Icon id="i-clock" />
               Audit trail
             </button>
-            <button className="primary-button not-implemented" disabled title="Not available in this build">
+            <button className="primary-button" disabled={!detail || loading} onClick={exportReport}>
               <Icon id="i-file" />
               <span>Export report</span>
             </button>
@@ -125,12 +146,39 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
                 </div>
               </div>
 
-              {detail.attachment_names.length > 0 && (
+              {detail.attachments.length > 0 && (
                 <div className="case-attachments">
                   <strong>Attached files</strong>
-                  <ul>{detail.attachment_names.map((name, index) => <li key={`${name}-${index}`}>{name}</li>)}</ul>
+                  <ul>{detail.attachments.map((attachment) => (
+                    <li key={attachment.path}>
+                      <button className="attachment-preview-button" onClick={() => setPreviewAttachment(attachment)}>
+                        <Icon id="i-eye" />
+                        {attachment.name}
+                      </button>
+                    </li>
+                  ))}</ul>
                 </div>
               )}
+
+              {detail.review_history && detail.review_history.length > 0 && (
+                <section className="review-history" aria-label="Reviewer history">
+                  <h4>Reviewer history</h4>
+                  <ol>
+                    {detail.review_history.map((entry) => (
+                      <li key={entry.id}>
+                        <span className="review-history-dot"><Icon id="i-check" /></span>
+                        <div>
+                          <strong>{entry.reviewer_label}</strong>
+                          <p>{entry.resolution}</p>
+                          <time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString()}</time>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
+
+              {exportError && <p className="form-error" role="alert">{exportError}</p>}
 
               {showComparison ? (
                 <>
@@ -264,6 +312,15 @@ export function CaseModal({ open, detail, loading, error, onClose }: CaseModalPr
           </div>
         )}
       </div>
+      {previewAttachment && detail && (
+        <AttachmentPreviewModal
+          key={previewAttachment.path}
+          attachment={previewAttachment}
+          attachments={detail.attachments}
+          onClose={() => setPreviewAttachment(null)}
+          onSelect={setPreviewAttachment}
+        />
+      )}
     </div>
   );
 }

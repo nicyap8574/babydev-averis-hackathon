@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./IconSprite";
 import type { View } from "../App";
 
@@ -272,6 +272,35 @@ const STEPS: Step[] = [
     ),
   },
   {
+    key: "reports",
+    label: "Review reports",
+    title: "Return to completed discrepancy reports",
+    tagline: "Reports",
+    body:
+      "Reports is the completed record of work that needs an audit trail: comparisons with mismatches and escalations a reviewer has resolved. Each row shows who sent the request, its outcome, the number of mismatched fields, and when it was completed.",
+    bullets: [
+      "Mismatches and reviewed escalations are collected in one place",
+      "Search by sender or subject to find a completed report",
+      "Open a row to return to the source case and its details",
+    ],
+    target: "reports",
+    targetLabel: "Open Reports",
+    shot: (
+      <MockFrame active={3}>
+        <MockHead title="Verification reports" sub="Completed discrepancy reports and reviewer history" />
+        <MockTable
+          rows={[
+            ["email_104", "Mismatch found · 2 fields", "red"],
+            ["email_512", "Reviewed escalation", "green"],
+            ["email_519", "Reviewed escalation", "green"],
+            ["email_402", "Mismatch found · 1 field", "red"],
+          ]}
+          highlight={0}
+        />
+      </MockFrame>
+    ),
+  },
+  {
     key: "analytics",
     label: "Check the trend",
     title: "See how the whole run behaved",
@@ -337,7 +366,21 @@ const STEPS: Step[] = [
 export function GuideView({ onNavigate }: GuideViewProps) {
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState<"down" | "up">("down");
+  const stageRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const step = STEPS[index];
+
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    const content = contentRef.current;
+    if (!stage || !content) return;
+    stage.style.height = `${content.scrollHeight}px`;
+    const observer = new ResizeObserver(() => {
+      stage.style.height = `${content.scrollHeight}px`;
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [index]);
 
   const go = (next: number) => {
     if (next < 0 || next >= STEPS.length || next === index) return;
@@ -385,7 +428,8 @@ export function GuideView({ onNavigate }: GuideViewProps) {
           </ol>
         </aside>
 
-        <div className="guide-stage panel">
+        <div className="guide-stage panel" ref={stageRef}>
+          <div className="guide-stage-content" ref={contentRef}>
           <div className="guide-shot-frame">
             <div className="guide-shot" key={step.key} data-direction={direction}>
               {step.shot}
@@ -433,6 +477,16 @@ export function GuideView({ onNavigate }: GuideViewProps) {
               ))}
             </div>
             <div className="guide-buttons">
+              {index > 0 && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => go(index - 1)}
+                >
+                  <Icon id="i-arrow" />
+                  <span>Previous</span>
+                </button>
+              )}
               {step.target && (
                 <button
                   type="button"
@@ -458,6 +512,7 @@ export function GuideView({ onNavigate }: GuideViewProps) {
                 </button>
               )}
             </div>
+          </div>
           </div>
         </div>
       </div>

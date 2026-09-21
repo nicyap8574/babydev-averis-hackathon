@@ -28,6 +28,20 @@ const STATUS_STYLE: Record<EmailStatus, { className: string; label: string }> = 
 };
 
 const CATEGORIES: Category[] = ["BL_COMPARISON", "SI_REQUEST", "INVOICE_QUERY", "GENERAL", "SPAM"];
+type TimestampSort = "ascending" | "descending";
+
+function timestampForSort(value: string): number {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function formatTimestamp(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString(undefined, {
+    day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit",
+  });
+}
 
 export function CaseTable({
   emails,
@@ -45,6 +59,7 @@ export function CaseTable({
 }: CaseTableProps) {
   const [filter, setFilter] = useState<"all" | "mismatch" | "review">("all");
   const [categoryFilters, setCategoryFilters] = useState<Category[]>([]);
+  const [timestampSort, setTimestampSort] = useState<TimestampSort>("descending");
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -72,11 +87,21 @@ export function CaseTable({
     });
   }, [emails, search, filter, categoryFilters, showFilter]);
 
-  const pageCount = paginate ? Math.max(1, Math.ceil(filtered.length / pageSize)) : 1;
+  const sorted = useMemo(() => {
+    const direction = timestampSort === "ascending" ? 1 : -1;
+    return [...filtered].sort((a, b) => direction * (timestampForSort(a.created_at) - timestampForSort(b.created_at)));
+  }, [filtered, timestampSort]);
+
+  const pageCount = paginate ? Math.max(1, Math.ceil(sorted.length / pageSize)) : 1;
   const currentPage = Math.min(page, pageCount);
   const visible = paginate
-    ? filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-    : filtered.slice(0, pageSize);
+    ? sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    : sorted.slice(0, pageSize);
+
+  const toggleTimestampSort = () => {
+    setTimestampSort((value) => value === "ascending" ? "descending" : "ascending");
+    setPage(1);
+  };
 
   const toggleOne = (id: string) => {
     setSelectedIds((prev) => {
@@ -175,6 +200,17 @@ export function CaseTable({
               <th className="col-id">Case ID</th>
               <th className="col-category">Category</th>
               <th className="col-status">Status</th>
+              <th>
+                <button
+                  type="button"
+                  className="table-sort-button"
+                  onClick={toggleTimestampSort}
+                  aria-label={`Sort by inbox time ${timestampSort === "ascending" ? "descending" : "ascending"}`}
+                  aria-sort={timestampSort}
+                >
+                  Received <span aria-hidden="true" className="sort-indicator">{timestampSort === "ascending" ? "↑" : "↓"}</span>
+                </button>
+              </th>
               {onArchive && <th className="col-actions" />}
             </tr>
           </thead>
@@ -210,13 +246,16 @@ export function CaseTable({
                     </div>
                   </td>
                   <td>
-                    <span className="case-id">{email.id}</span>
+                    <span className="case-id" title={email.id}>{email.id}</span>
                   </td>
                   <td>
                     <CategoryPill category={email.classification} />
                   </td>
                   <td>
                     <span className={`status ${style.className}`}>{style.label}</span>
+                  </td>
+                  <td className="case-timestamp">
+                    <time dateTime={email.created_at}>{formatTimestamp(email.created_at)}</time>
                   </td>
                   {onArchive && (
                     <td className="col-actions" onClick={(event) => event.stopPropagation()}>
@@ -235,7 +274,7 @@ export function CaseTable({
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={onArchive ? 6 : 4} style={{ textAlign: "center", color: "var(--muted)", padding: "28px" }}>
+                <td colSpan={onArchive ? 7 : 5} style={{ textAlign: "center", color: "var(--muted)", padding: "28px" }}>
                   {emails.length === 0
                     ? (emptyMessage ?? "No cases yet. Select New case to get started.")
                     : "No cases match your search."}
@@ -247,7 +286,7 @@ export function CaseTable({
       </div>
       <div className="table-footer">
         <span>
-          Showing {visible.length} of {filtered.length} cases
+          Showing {visible.length} of {sorted.length} cases
         </span>
         {paginate ? (
           <div className="pagination">

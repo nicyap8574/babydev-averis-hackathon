@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchEmailDetail,
+  fetchReportDetail,
   fetchEmails,
   fetchReviewQueue,
   resolveReviewItem,
@@ -17,10 +18,10 @@ import { Topbar } from "./components/Topbar";
 import { MetricsRow } from "./components/MetricsRow";
 import { CaseTable } from "./components/CaseTable";
 import { InsightsRail } from "./components/InsightsRail";
-import { PlaceholderView } from "./components/PlaceholderView";
 import { SettingsView } from "./components/SettingsView";
 import { AnalyticsView } from "./components/AnalyticsView";
 import { ReviewQueueView } from "./components/ReviewQueueView";
+import { ReportsView } from "./components/ReportsView";
 import { CaseModal } from "./components/CaseModal";
 import { Toast } from "./components/Toast";
 import { GuideView } from "./components/GuideView";
@@ -93,6 +94,7 @@ function App() {
   const [batchError, setBatchError] = useState<string | null>(null);
 
   const [modalEmailId, setModalEmailId] = useState<string | null>(null);
+  const [modalKind, setModalKind] = useState<"case" | "report">("case");
   const [modalDetail, setModalDetail] = useState<EmailDetail | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -133,11 +135,12 @@ function App() {
     setModalDetail(null);
     setModalError(null);
     setModalLoading(true);
-    fetchEmailDetail(modalEmailId)
+    const loadDetail = modalKind === "report" ? fetchReportDetail : fetchEmailDetail;
+    loadDetail(modalEmailId)
       .then(setModalDetail)
       .catch((error: Error) => setModalError(error.message))
       .finally(() => setModalLoading(false));
-  }, [modalEmailId]);
+  }, [modalEmailId, modalKind]);
 
   useEffect(() => {
     document.body.style.overflow = modalEmailId ? "hidden" : "";
@@ -167,6 +170,21 @@ function App() {
     setView(next);
     setSidebarOpen(false);
     setSearch("");
+  };
+
+  const openCase = (emailId: string) => {
+    setModalKind("case");
+    setModalEmailId(emailId);
+  };
+
+  const openReport = (emailId: string) => {
+    setModalKind("report");
+    setModalEmailId(emailId);
+  };
+
+  const closeModal = () => {
+    setModalEmailId(null);
+    setModalKind("case");
   };
 
   const handleResolve = async (emailId: string, resolution: string) => {
@@ -285,7 +303,9 @@ function App() {
             subtitle={subtitle}
             search={search}
             onSearchChange={setSearch}
-            searchEnabled={view === "dashboard" || view === "inbox" || view === "archived"}
+            searchEnabled={
+              view === "dashboard" || view === "inbox" || view === "archived" || view === "reports"
+            }
             onMenuClick={() => setSidebarOpen((open) => !open)}
             onNewCase={() => { setCreateError(null); setCreateNotice(null); setNewCaseOpen(true); }}
             onBatchUpload={() => {
@@ -322,7 +342,7 @@ function App() {
               <div className="dashboard-grid">
                 <CaseTable
                   emails={emails}
-                  onOpen={setModalEmailId}
+                  onOpen={openCase}
                   search={search}
                   showFilter
                   pageSize={8}
@@ -337,7 +357,7 @@ function App() {
             <section className="view active">
               <CaseTable
                 emails={emails}
-                onOpen={setModalEmailId}
+                onOpen={openCase}
                 search={search}
                 showFilter
                 paginate
@@ -351,7 +371,7 @@ function App() {
             <section className="view active">
               <CaseTable
                 emails={archivedEmails}
-                onOpen={setModalEmailId}
+                onOpen={openCase}
                 search={search}
                 showFilter
                 paginate
@@ -367,7 +387,7 @@ function App() {
 
           {!loading && !loadError && view === "review" && (
             <section className="view active">
-              <ReviewQueueView items={reviewQueue} onOpen={setModalEmailId} onResolve={handleResolve} />
+              <ReviewQueueView items={reviewQueue} onOpen={openCase} onResolve={handleResolve} />
             </section>
           )}
 
@@ -381,7 +401,7 @@ function App() {
             <SettingsView theme={theme} onThemeChange={setTheme} />
           )}
 
-          {!loading && !loadError && view === "reports" && <PlaceholderView view={view} />}
+          {!loading && !loadError && view === "reports" && <ReportsView search={search} onOpen={openReport} />}
         </main>
       </div>
 
@@ -390,7 +410,7 @@ function App() {
         detail={modalDetail}
         loading={modalLoading}
         error={modalError}
-        onClose={() => setModalEmailId(null)}
+        onClose={closeModal}
       />
 
       {/* Rendered only while open so each run starts from a blank form —
