@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/document-classifier.test.ts",
+    "test": "node --test tests/document-classifier.test.ts tests/case-report.test.ts",
     "evaluate:classifier": "node scripts/evaluate-classifier.mjs",
     "typecheck": "tsc --noEmit"
   },

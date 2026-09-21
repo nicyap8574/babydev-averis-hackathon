@@ -7,7 +7,8 @@ DocWise is a shared workspace for classifying shipping emails and comparing Ship
 - Stores submitted cases and attachments in Supabase.
 - Classifies email intent through the `identify-document-request` Supabase Edge Function.
 - Compares SI/BL attachments deterministically across seven shipping fields.
-- Shows comparison results, mismatches, and review items in the React dashboard.
+- Shows comparison results, mismatches, review items, and a searchable archive of completed discrepancy reports in the React dashboard.
+- Lets users preview or download case attachments from the case details view.
 
 ## Tech stack
 
@@ -46,6 +47,25 @@ Create `frontend/.env.local` with the public Supabase values:
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
+
+### Run the comparison API locally
+
+The comparison API is a Python endpoint, so install its dependencies from the repository root before starting it:
+
+```powershell
+python -m pip install -r requirements.txt
+cd frontend
+```
+
+Set the server-only Supabase values as plain strings (without Markdown brackets). The service-role key must use the exact `SUPABASE_SERVICE_ROLE_KEY` name:
+
+```powershell
+$env:SUPABASE_URL="https://your-project.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+python -c "from http.server import HTTPServer; from api.compare import handler; HTTPServer(('127.0.0.1', 3001), handler).serve_forever()"
+```
+
+Never commit these values or put the service-role key in `.env.local`; it is privileged and must stay server-only. If a key is exposed, revoke and regenerate it in Supabase immediately.
 
 ## Supabase setup
 

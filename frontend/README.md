@@ -4,11 +4,11 @@ DocWise is one shared workspace for intake and review. Everyone with access to t
 
 ## As a user
 
-1. Open **Overview** to see recent cases, or **Inbox** to find a case by its subject, sender, or ID.
+1. Open **Overview** to see recent cases, or **Inbox** to find a case by its subject, sender, or ID. The **Received** column shows when the case entered the inbox; select its heading to switch between newest-first and oldest-first.
 2. Select **New case**, enter the sender, subject, and email message, and attach the SI/BL files when available. Select **Create case**. The case is saved to the shared Supabase database and the files go to its private `case-attachments` bucket.
-3. Open the case to see the classifier result and, for SI/BL comparison requests, the completed seven-field deterministic comparison.
+3. Open the case to see the classifier result and, for SI/BL comparison requests, the completed seven-field deterministic comparison. Attachments can be previewed when supported or downloaded.
 4. Use **Review queue** for cases that need a human resolution. Add a resolution note and resolve the item; it remains visible in the shared workspace.
-5. **Analytics** summarizes the cases that have comparison results.
+5. Open **Reports** for completed discrepancy reports and reviewer history. **Analytics** summarizes the cases that have comparison results.
 
 ## Workspace setup
 
